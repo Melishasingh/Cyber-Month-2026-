@@ -192,14 +192,9 @@
   </div>
 </div>
 
-<!-- HIDDEN FORM BRIDGE TO BYPASS GOOGLE WORKSPACE CORS LOCK -->
-<iframe name="hidden_iframe" id="hidden_iframe" style="width:100%; height:80px; border:1px solid #00e5ff; background:#000; color:#fff; margin-top:15px;"></iframe>
-<form id="gform" action="https://script.google.com/a/macros/coupa.com/s/AKfycbz3M3Kx9jdGC2ppNX6n-hCagvp58kycK5mCUq8pwUpc6IFi6GTZRFJ-MqyUT7V0IAGq/exec" method="POST" target="hidden_iframe" style="display:none;">
-  <input type="hidden" name="email" id="form-email">
-  <input type="hidden" name="score" id="form-score">
-</form>
-
 <script>
+  // GOOGLE APPS SCRIPT ENDPOINT
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/a/macros/coupa.com/s/AKfycbz3M3Kx9jdGC2ppNX6n-hCagvp58kycK5mCUq8pwUpc6IFi6GTZRFJ-MqyUT7V0IAGq/exec";
   const GAME_URL = window.location.href;
 
   const intercepts = [
@@ -298,10 +293,21 @@
     if (GOOGLE_SCRIPT_URL) {
       const payloadUrl = `${GOOGLE_SCRIPT_URL}?email=${encodeURIComponent(userEmail)}&score=${encodeURIComponent(score)}`;
       
-      // Dual-trigger ping for 100% reliability
+      // Dual-trigger ping
       fetch(payloadUrl, { mode: 'no-cors' });
       
       const beacon = new Image();
       beacon.src = payloadUrl;
     }
   }
+
+  function copySlackShare() {
+    const text = `🕵️ *OPERATION GHOST PROTOCOL COMPLETED*\nI scored *${score}/400 PTS* on Week 1's Counter-Intel Game! Can you beat my score, Agents?\n👉 Play here: ${GAME_URL}`;
+    navigator.clipboard.writeText(text).then(() => {
+      document.getElementById('slack-copied').style.display = 'block';
+    });
+  }
+</script>
+
+</body>
+</html>
