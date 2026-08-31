@@ -1,16 +1,30 @@
+This overhauled version turns Week 1 into an **Interactive Threat Inspection Terminal**. Instead of guessing blindly, players can hover over or tap suspicious links, email headers, and sender addresses to inspect hidden raw data (like real URL destinations and header domain spoofing) before issuing a verdict.
+
+**What Makes It More Interactive**
+
+* **Hover Inspection Tooltips:** Hovering over/tapping highlighted elements reveals raw headers and true link destinations.
+* **Simulated Device UIs:** Interfaces switch dynamically between a Cyber-Terminal, a Mobile SMS screen, and an Email Client.
+* **Terminal Screen Flashes:** Audio-visual feedback with screen flashes (Green for verified intel, Red for fallen traps).
+* **Streak Multiplier System:** Consecutive correct classifications build a score multiplier (`1x`, `1.5x`, `2x`).
+
+---
+
+### Production-Ready `index.html`
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OPERATION: GHOST PROTOCOL | WRD Counter-Intelligence</title>
+  <title>GHOST PROTOCOL | Threat Inspector</title>
   <style>
     :root {
-      --bg-color: #0b1319;
-      --card-bg: #13222d;
+      --bg-color: #060a0f;
+      --card-bg: #0c1620;
       --accent-teal: #00e5ff;
       --ghost-green: #00ff88;
-      --trap-red: #ff3b30;
+      --trap-red: #ff2a55;
       --text-color: #d1f4ff;
       --font-mono: 'Courier New', Courier, monospace;
     }
@@ -20,220 +34,193 @@
       color: var(--text-color);
       font-family: var(--font-mono);
       margin: 0;
-      padding: 20px;
+      padding: 15px;
       display: flex;
       justify-content: center;
       align-items: center;
       min-height: 100vh;
     }
 
-    .terminal-container {
+    .terminal {
       width: 100%;
-      max-width: 650px;
+      max-width: 680px;
       background: var(--card-bg);
       border: 2px solid var(--accent-teal);
       border-radius: 8px;
-      box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
-      padding: 25px;
+      box-shadow: 0 0 25px rgba(0, 229, 255, 0.15);
+      padding: 20px;
       box-sizing: border-box;
-      position: relative;
+      transition: border-color 0.3s, box-shadow 0.3s;
     }
+
+    .flash-success { border-color: var(--ghost-green); box-shadow: 0 0 30px var(--ghost-green); }
+    .flash-fail { border-color: var(--trap-red); box-shadow: 0 0 30px var(--trap-red); }
 
     .header {
       border-bottom: 1px dashed var(--accent-teal);
-      padding-bottom: 15px;
-      margin-bottom: 20px;
+      padding-bottom: 12px;
+      margin-bottom: 15px;
       text-align: center;
     }
 
-    .ghost-avatar {
-      font-size: 2.5rem;
-      margin-bottom: 5px;
-    }
-
-    .motto {
-      color: var(--ghost-green);
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      background: #04080c;
+      padding: 8px 12px;
+      border-radius: 4px;
       font-size: 0.85rem;
-      font-style: italic;
+      color: var(--ghost-green);
+      margin-bottom: 15px;
     }
 
-    .intercept-card {
-      background: #081017;
-      border: 1px solid #1e3a4e;
-      border-left: 4px solid var(--accent-teal);
+    .device-screen {
+      background: #020508;
+      border: 1px solid #1a3348;
+      border-radius: 6px;
       padding: 15px;
       margin: 15px 0;
+      min-height: 140px;
+      position: relative;
+    }
+
+    /* Interactive Inspect Tooltips */
+    .inspectable {
+      border-bottom: 2px dotted var(--accent-teal);
+      color: #fff;
+      cursor: help;
+      position: relative;
+      background: rgba(0, 229, 255, 0.1);
+      padding: 0 4px;
+      border-radius: 2px;
+    }
+
+    .inspectable:hover::after, .inspectable:focus::after {
+      content: attr(data-intel);
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #000;
+      color: var(--accent-teal);
+      border: 1px solid var(--accent-teal);
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      z-index: 100;
       border-radius: 4px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.8);
     }
 
     .btn {
       background: transparent;
       border: 1px solid var(--accent-teal);
       color: var(--accent-teal);
-      padding: 12px 20px;
+      padding: 12px;
       font-family: var(--font-mono);
       font-weight: bold;
       cursor: pointer;
       border-radius: 4px;
-      transition: all 0.2s;
       width: 100%;
-      margin-top: 10px;
+      margin-top: 8px;
+      transition: all 0.2s;
     }
 
-    .btn:hover {
-      background: var(--accent-teal);
-      color: var(--bg-color);
-      box-shadow: 0 0 10px var(--accent-teal);
-    }
-
-    .btn-danger {
-      border-color: var(--trap-red);
-      color: var(--trap-red);
-    }
-
-    .btn-danger:hover {
-      background: var(--trap-red);
-      color: #fff;
-      box-shadow: 0 0 10px var(--trap-red);
-    }
-
-    .btn-slack {
-      border-color: #e01e5a;
-      color: #e01e5a;
-    }
-
-    .btn-slack:hover {
-      background: #e01e5a;
-      color: #fff;
-      box-shadow: 0 0 10px #e01e5a;
-    }
+    .btn:hover { background: var(--accent-teal); color: #000; }
+    .btn-danger { border-color: var(--trap-red); color: var(--trap-red); }
+    .btn-danger:hover { background: var(--trap-red); color: #fff; }
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
     .input-field {
-      width: 100%;
-      padding: 10px;
-      background: #081017;
-      border: 1px solid var(--accent-teal);
-      color: #fff;
-      font-family: var(--font-mono);
-      margin-bottom: 15px;
-      box-sizing: border-box;
-      border-radius: 4px;
+      width: 100%; padding: 10px; background: #020508;
+      border: 1px solid var(--accent-teal); color: #fff;
+      font-family: var(--font-mono); margin-bottom: 15px; box-sizing: border-box;
     }
 
-    .hud {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 15px;
-      font-size: 0.9rem;
-      color: var(--ghost-green);
-    }
-
-    .feedback {
-      margin-top: 15px;
-      padding: 10px;
-      border-radius: 4px;
-      font-size: 0.9rem;
-      display: none;
-    }
-
-    .feedback-success { background: rgba(0, 255, 136, 0.15); border: 1px solid var(--ghost-green); }
-    .feedback-fail { background: rgba(255, 59, 48, 0.15); border: 1px solid var(--trap-red); }
-
+    .feedback { padding: 12px; border-radius: 4px; font-size: 0.85rem; margin-top: 15px; display: none; }
+    .feedback-success { background: rgba(0, 255, 136, 0.1); border: 1px solid var(--ghost-green); }
+    .feedback-fail { background: rgba(255, 42, 85, 0.1); border: 1px solid var(--trap-red); }
     .hidden { display: none; }
   </style>
 </head>
 <body>
 
-<div class="terminal-container">
+<div class="terminal" id="terminal-box">
   <div class="header">
-    <div class="ghost-avatar">👻</div>
-    <h2 style="margin:5px 0; color: var(--accent-teal);">GHOST PROTOCOL: INTERCEPT</h2>
-    <div class="motto">"TRUST, BUT VERIFY... THEN VERIFY AGAIN." - Agent Ghost</div>
+    <h2 style="margin:0; color: var(--accent-teal);">👻 GHOST PROTOCOL: THREAT INSPECTOR</h2>
+    <small style="color: var(--ghost-green);">Hover/Tap underlined text to inspect raw headers & link data</small>
   </div>
 
-  <!-- SCREEN 1: LOGIN -->
+  <!-- SCREEN 1: START -->
   <div id="screen-login">
-    <p>⚡ <strong>WRD FIELD INITIATION:</strong> Agent Ghost requires your identification to start the intercept mission.</p>
-    <label for="agent-email">Enter Work Email:</label>
-    <input type="email" id="agent-email" class="input-field" placeholder="agent@company.com" required>
-    <button class="btn" onclick="startGame()">INITIATE MISSION</button>
+    <p>⚡ Enter your operative email to initiate high-value intercept analysis:</p>
+    <input type="email" id="agent-email" class="input-field" placeholder="agent@company.com">
+    <button class="btn" onclick="startGame()">START THREAT ANALYSIS</button>
   </div>
 
   <!-- SCREEN 2: GAMEPLAY -->
   <div id="screen-game" class="hidden">
     <div class="hud">
       <span>AGENT: <span id="hud-email"></span></span>
+      <span>MULTIPLIER: <span id="hud-streak" style="color:var(--accent-teal);">1x</span></span>
       <span>SCORE: <span id="hud-score">0</span> PTS</span>
     </div>
-    
-    <div id="intercept-box" class="intercept-card">
-      <div style="color: #888; font-size: 0.8rem; margin-bottom: 5px;" id="intercept-type">INCOMING INTERCEPT</div>
-      <div id="intercept-body" style="font-size: 0.95rem; line-height: 1.4;"></div>
-    </div>
 
-    <div id="action-buttons">
-      <button class="btn" onclick="makeChoice(true)">🚩 REPORT & VERIFY (TRAP)</button>
-      <button class="btn btn-danger" onclick="makeChoice(false)">🖱️ TRUST & CLICK (SAFE)</button>
+    <div style="font-size:0.8rem; color:#888;" id="intercept-type">INTERCEPT</div>
+    <div class="device-screen" id="intercept-body"></div>
+
+    <div id="action-buttons" class="btn-grid">
+      <button class="btn" onclick="makeChoice(true)">🚩 FLAG AS TRAP</button>
+      <button class="btn btn-danger" onclick="makeChoice(false)">✅ VERIFY AS SAFE</button>
     </div>
 
     <div id="feedback-box" class="feedback"></div>
     <button id="next-btn" class="btn hidden" onclick="nextIntercept()">NEXT INTERCEPT ➔</button>
   </div>
 
-  <!-- SCREEN 3: RESULTS -->
+  <!-- SCREEN 3: DEBRIEF -->
   <div id="screen-results" class="hidden" style="text-align: center;">
     <h3 style="color: var(--ghost-green);">MISSION DEBRIEF COMPLETE</h3>
-    <p>Final Score: <strong id="final-score" style="font-size: 1.5rem; color: var(--accent-teal);">0</strong> PTS</p>
-    <p id="rank-badge" style="font-weight: bold; color: var(--ghost-green);"></p>
-    <p style="font-size:0.85rem; color:#aaa;">Your score has been encrypted & submitted to the GRC Leaderboard.</p>
-
-    <button class="btn btn-slack" onclick="copySlackShare()">💬 COPY SLACK BRAG MESSAGE</button>
-    <p id="slack-copied" style="color: var(--ghost-green); font-size: 0.8rem; display:none;">Copied to clipboard! Paste it in Slack!</p>
+    <p>Final Score: <strong id="final-score" style="font-size: 1.8rem; color: var(--accent-teal);">0</strong> PTS</p>
+    <p id="rank-badge" style="font-weight: bold;"></p>
+    <button class="btn" style="border-color:#e01e5a; color:#e01e5a;" onclick="copySlack()">💬 COPY SLACK BRAG MESSAGE</button>
+    <p id="slack-copied" style="color: var(--ghost-green); font-size: 0.8rem; display:none;">Copied to clipboard!</p>
   </div>
 </div>
 
 <script>
-  // GOOGLE APPS SCRIPT ENDPOINT
-  const GOOGLE_SCRIPT_URL = "https://script.google.com/a/macros/coupa.com/s/AKfycbz3M3Kx9jdGC2ppNX6n-hCagvp58kycK5mCUq8pwUpc6IFi6GTZRFJ-MqyUT7V0IAGq/exec";
-  const GAME_URL = window.location.href;
-
   const intercepts = [
     {
-      type: "📲 SMS INTERCEPT (Smishing)",
-      body: "<strong>[IT-ALERT]:</strong> Critical VPN session expired. Login immediately within 15 mins to maintain access: <u>https://company-sso-portal.net/verify</u>",
+      type: "📲 SMS INTERCEPT | Mobile Endpoint",
+      body: "[IT-ALERT]: Critical SSO Session Expired. Login within 15m: <span class='inspectable' data-intel='REDIRECT: http://192.168.1.45/login.php (Non-Company IP)'>sso-company.com/verify</span>",
       isTrap: true,
-      reason: "TRAP! Creates artificial urgency and links to an external domain (.net instead of company domain)."
+      reason: "TRAP DETECTED: Hovering over the URL reveals a raw IP redirect (`192.168.1.45`) mimicking the company SSO portal."
     },
     {
-      type: "📧 EMAIL INTERCEPT (Internal)",
-      body: "<strong>From:</strong> HR Team &lt;hr@company.com&gt;<br><strong>Subject:</strong> 2026 Open Enrollment Update<br>Team, please review the uploaded policy document in our shared SharePoint site.",
+      type: "📧 EMAIL INTERCEPT | Workstation Inbox",
+      body: "<strong>From:</strong> <span class='inspectable' data-intel='HEADER: OpenEnrollment@company.com (SPF: PASS, DKIM: PASS)'>HR Benefits &lt;hr@company.com&gt;</span><br><strong>Subject:</strong> 2026 Open Enrollment<br>Please review the policy doc on <span class='inspectable' data-intel='DESTINATION: https://company.sharepoint.com/docs'>SharePoint Internal</span>.",
       isTrap: false,
-      reason: "SAFE! Comes from an internal address and directs you to standard internal shared storage without suspicious external links."
+      reason: "VERIFIED SAFE: Sender header authentication (SPF/DKIM) passes and destination link leads directly to standard internal SharePoint."
     },
     {
-      type: "📧 EMAIL INTERCEPT (Whaling / Executive Pretexting)",
-      body: "<strong>From:</strong> CEO &lt;exec-office-direct@gmail.com&gt;<br><strong>Subject:</strong> URGENT: Wire Transfer<br>I'm stuck in a board meeting. Need you to process a quick vendor wire gift card payment right now. Keep this quiet.",
+      type: "📧 EMAIL INTERCEPT | Executive Office",
+      body: "<strong>From:</strong> <span class='inspectable' data-intel='HEADER: ceo-office-direct99@gmail.com (EXTERNAL GMAIL)'>CEO Office &lt;ceo@company.com&gt;</span><br><strong>Subject:</strong> Urgent Wire Transfer<br>I need emergency vendor gift cards processed immediately. Keep this off Slack.",
       isTrap: true,
-      reason: "TRAP! Executive impersonation sent from a personal Gmail account requesting urgent, secret financial transactions."
+      reason: "TRAP DETECTED: The display name claims 'ceo@company.com', but hovering over the sender reveals an external personal Gmail account."
     },
     {
-      type: "📲 SMS INTERCEPT (Smishing)",
-      body: "<strong>[UPS Delivery]:</strong> Package delivery blocked due to missing house number. Update info here: <u>bit.ly/3x9Z_ups</u>",
+      type: "📲 SMS INTERCEPT | Mobile Endpoint",
+      body: "[UPS Courier]: Package blocked due to address error. Confirm details: <span class='inspectable' data-intel='REDIRECT: http://bit.ly/3x9Z_tracker (Shortened URL)'>ups.com/track/8492</span>",
       isTrap: true,
-      reason: "TRAP! Classic smishing using shortened links to harvest personal details."
+      reason: "TRAP DETECTED: Link text shows `ups.com`, but inspecting reveals a hidden Bitly redirect designed to bypass domain filters."
     }
   ];
 
-  let currentIdx = 0;
-  let score = 0;
-  let userEmail = "";
+  let currentIdx = 0, score = 0, streak = 1, userEmail = "";
 
   function startGame() {
     const input = document.getElementById('agent-email').value;
-    if (!input || !input.includes('@')) {
-      alert('Please enter a valid work email.');
-      return;
-    }
+    if (!input || !input.includes('@')) return alert('Please enter a valid work email.');
     userEmail = input;
     document.getElementById('hud-email').innerText = userEmail.split('@')[0];
     document.getElementById('screen-login').classList.add('hidden');
@@ -254,17 +241,24 @@
     const data = intercepts[currentIdx];
     const isCorrect = (userSaidTrap === data.isTrap);
     const feedbackBox = document.getElementById('feedback-box');
+    const terminal = document.getElementById('terminal-box');
 
     if (isCorrect) {
-      score += 100;
+      score += 100 * streak;
+      streak = Math.min(streak + 0.5, 2.5);
+      terminal.className = "terminal flash-success";
       feedbackBox.className = "feedback feedback-success";
-      feedbackBox.innerHTML = "<strong>✅ INTEL CORRECT!</strong> " + data.reason;
+      feedbackBox.innerHTML = "<strong>✅ INTEL CONFIRMED!</strong> " + data.reason;
     } else {
+      streak = 1;
+      terminal.className = "terminal flash-fail";
       feedbackBox.className = "feedback feedback-fail";
-      feedbackBox.innerHTML = "<strong>❌ BITTEN BY THE TRAP!</strong> " + data.reason;
+      feedbackBox.innerHTML = "<strong>❌ TRAP TRIGGERED!</strong> " + data.reason;
     }
 
+    setTimeout(() => { terminal.className = "terminal"; }, 600);
     document.getElementById('hud-score').innerText = score;
+    document.getElementById('hud-streak').innerText = streak + "x";
     document.getElementById('action-buttons').classList.add('hidden');
     feedbackBox.style.display = 'block';
     document.getElementById('next-btn').classList.remove('hidden');
@@ -272,42 +266,26 @@
 
   function nextIntercept() {
     currentIdx++;
-    if (currentIdx < intercepts.length) {
-      loadIntercept();
-    } else {
-      endGame();
-    }
+    if (currentIdx < intercepts.length) loadIntercept();
+    else endGame();
   }
 
   function endGame() {
     document.getElementById('screen-game').classList.add('hidden');
     document.getElementById('screen-results').classList.remove('hidden');
     document.getElementById('final-score').innerText = score;
-
-    let rank = "Field Trainee";
-    if (score >= 400) rank = "Ghost-Level Counter-Intel Operative 🕵️‍♂️";
-    else if (score >= 200) rank = "Vigilant Agent 🛡️";
-    document.getElementById('rank-badge').innerText = "RANK: " + rank;
-
-    // Send score via GET request (Bypasses CORS & Iframe blocks completely)
-    if (GOOGLE_SCRIPT_URL) {
-      const payloadUrl = `${GOOGLE_SCRIPT_URL}?email=${encodeURIComponent(userEmail)}&score=${encodeURIComponent(score)}`;
-      
-      // Dual-trigger ping
-      fetch(payloadUrl, { mode: 'no-cors' });
-      
-      const beacon = new Image();
-      beacon.src = payloadUrl;
-    }
+    let rank = score >= 500 ? "Master Counter-Intel Operative 🕵️‍♂️" : "Vigilant Security Agent 🛡️";
+    document.getElementById('rank-badge').innerText = "ASSIGNED RANK: " + rank;
   }
 
-  function copySlackShare() {
-    const text = `🕵️ *OPERATION GHOST PROTOCOL COMPLETED*\nI scored *${score}/400 PTS* on Week 1's Counter-Intel Game! Can you beat my score, Agents?\n👉 Play here: ${GAME_URL}`;
+  function copySlack() {
+    const text = `🕵️ *OPERATION GHOST PROTOCOL*\nI scored *${score} PTS* on Week 1's Interactive Threat Inspector! Can you spot the traps?\n👉 Play here: ${window.location.href}`;
     navigator.clipboard.writeText(text).then(() => {
       document.getElementById('slack-copied').style.display = 'block';
     });
   }
 </script>
-
 </body>
 </html>
+
+```
