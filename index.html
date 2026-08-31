@@ -294,19 +294,14 @@
     else if (score >= 200) rank = "Vigilant Agent 🛡️";
     document.getElementById('rank-badge').innerText = "RANK: " + rank;
 
-    // Submit form silently to Google Sheet via hidden iframe
-    document.getElementById('form-email').value = userEmail;
-    document.getElementById('form-score').value = score;
-    document.getElementById('gform').submit();
+    // Send score via GET request (Bypasses CORS & Iframe blocks completely)
+    if (GOOGLE_SCRIPT_URL) {
+      const payloadUrl = `${GOOGLE_SCRIPT_URL}?email=${encodeURIComponent(userEmail)}&score=${encodeURIComponent(score)}`;
+      
+      // Dual-trigger ping for 100% reliability
+      fetch(payloadUrl, { mode: 'no-cors' });
+      
+      const beacon = new Image();
+      beacon.src = payloadUrl;
+    }
   }
-
-  function copySlackShare() {
-    const text = `🕵️ *OPERATION GHOST PROTOCOL COMPLETED*\nI scored *${score}/400 PTS* on Week 1's Counter-Intel Game! Can you beat my score, Agents?\n👉 Play here: ${GAME_URL}`;
-    navigator.clipboard.writeText(text).then(() => {
-      document.getElementById('slack-copied').style.display = 'block';
-    });
-  }
-</script>
-
-</body>
-</html>
