@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OPERATION: GHOST PROTOCOL | WRD Counter-Intelligence</title>
+  <style>
+    :root {
+      --bg-color: #0b1319;
+      --card-bg: #13222d;
+      --accent-teal: #00e5ff;
+      --ghost-green: #00ff88;
+      --trap-red: #ff3b30;
+      --text-color: #d1f4ff;
+      --font-mono: 'Courier New', Courier, monospace;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: var(--font-mono);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .terminal-container {
+      width: 100%;
+      max-width: 650px;
+      background: var(--card-bg);
+      border: 2px solid var(--accent-teal);
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+      padding: 25px;
+      box-sizing: border-box;
+      position: relative;
+    }
+
+    .header {
+      border-bottom: 1px dashed var(--accent-teal);
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .ghost-avatar {
+      font-size: 2.5rem;
+      margin-bottom: 5px;
+    }
+
+    .motto {
+      color: var(--ghost-green);
+      font-size: 0.85rem;
+      font-style: italic;
+    }
+
+    .intercept-card {
+      background: #081017;
+      border: 1px solid #1e3a4e;
+      border-left: 4px solid var(--accent-teal);
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 4px;
+    }
+
+    .btn {
+      background: transparent;
+      border: 1px solid var(--accent-teal);
+      color: var(--accent-teal);
+      padding: 12px 20px;
+      font-family: var(--font-mono);
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: all 0.2s;
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .btn:hover {
+      background: var(--accent-teal);
+      color: var(--bg-color);
+      box-shadow: 0 0 10px var(--accent-teal);
+    }
+
+    .btn-danger {
+      border-color: var(--trap-red);
+      color: var(--trap-red);
+    }
+
+    .btn-danger:hover {
+      background: var(--trap-red);
+      color: #fff;
+      box-shadow: 0 0 10px var(--trap-red);
+    }
+
+    .btn-slack {
+      border-color: #e01e5a;
+      color: #e01e5a;
+    }
+
+    .btn-slack:hover {
+      background: #e01e5a;
+      color: #fff;
+      box-shadow: 0 0 10px #e01e5a;
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 10px;
+      background: #081017;
+      border: 1px solid var(--accent-teal);
+      color: #fff;
+      font-family: var(--font-mono);
+      margin-bottom: 15px;
+      box-sizing: border-box;
+      border-radius: 4px;
+    }
+
+    .hud {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+      color: var(--ghost-green);
+    }
+
+    .feedback {
+      margin-top: 15px;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .feedback-success { background: rgba(0, 255, 136, 0.15); border: 1px solid var(--ghost-green); }
+    .feedback-fail { background: rgba(255, 59, 48, 0.15); border: 1px solid var(--trap-red); }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div class="terminal-container">
+  <div class="header">
+    <div class="ghost-avatar">👻</div>
+    <h2 style="margin:5px 0; color: var(--accent-teal);">GHOST PROTOCOL: INTERCEPT</h2>
+    <div class="motto">"TRUST, BUT VERIFY... THEN VERIFY AGAIN." - Agent Ghost</div>
+  </div>
+
+  <!-- SCREEN 1: LOGIN -->
+  <div id="screen-login">
+    <p>⚡ <strong>WRD FIELD INITIATION:</strong> Agent Ghost requires your identification to start the intercept mission.</p>
+    <label for="agent-email">Enter Work Email:</label>
+    <input type="email" id="agent-email" class="input-field" placeholder="agent@company.com" required>
+    <button class="btn" onclick="startGame()">INITIATE MISSION</button>
+  </div>
+
+  <!-- SCREEN 2: GAMEPLAY -->
+  <div id="screen-game" class="hidden">
+    <div class="hud">
+      <span>AGENT: <span id="hud-email"></span></span>
+      <span>SCORE: <span id="hud-score">0</span> PTS</span>
+    </div>
+    
+    <div id="intercept-box" class="intercept-card">
+      <div style="color: #888; font-size: 0.8rem; margin-bottom: 5px;" id="intercept-type">INCOMING INTERCEPT</div>
+      <div id="intercept-body" style="font-size: 0.95rem; line-height: 1.4;"></div>
+    </div>
+
+    <div id="action-buttons">
+      <button class="btn" onclick="makeChoice(true)">🚩 REPORT & VERIFY (TRAP)</button>
+      <button class="btn btn-danger" onclick="makeChoice(false)">🖱️ TRUST & CLICK (SAFE)</button>
+    </div>
+
+    <div id="feedback-box" class="feedback"></div>
+    <button id="next-btn" class="btn hidden" onclick="nextIntercept()">NEXT INTERCEPT ➔</button>
+  </div>
+
+  <!-- SCREEN 3: RESULTS -->
+  <div id="screen-results" class="hidden" style="text-align: center;">
+    <h3 style="color: var(--ghost-green);">MISSION DEBRIEF COMPLETE</h3>
+    <p>Final Score: <strong id="final-score" style="font-size: 1.5rem; color: var(--accent-teal);">0</strong> PTS</p>
+    <p id="rank-badge" style="font-weight: bold; color: var(--ghost-green);"></p>
+    <p style="font-size:0.85rem; color:#aaa;">Your score has been encrypted & submitted to the GRC Leaderboard.</p>
+
+    <button class="btn btn-slack" onclick="copySlackShare()">💬 COPY SLACK BRAG MESSAGE</button>
+    <p id="slack-copied" style="color: var(--ghost-green); font-size: 0.8rem; display:none;">Copied to clipboard! Paste it in Slack!</p>
+  </div>
+</div>
+
+<script>
+  // CONFIGURATION: Replace with your Google Apps Script Web App URL
+  const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL";
+  const GAME_URL = window.location.href;
+
+  const intercepts = [
+    {
+      type: "📲 SMS INTERCEPT (Smishing)",
+      body: "<strong>[IT-ALERT]:</strong> Critical VPN session expired. Login immediately within 15 mins to maintain access: <u>https://company-sso-portal.net/verify</u>",
+      isTrap: true,
+      reason: "TRAP! Creates artificial urgency and links to an external domain (.net instead of company domain)."
+    },
+    {
+      type: "📧 EMAIL INTERCEPT (Internal)",
+      body: "<strong>From:</strong> HR Team &lt;hr@company.com&gt;<br><strong>Subject:</strong> 2026 Open Enrollment Update<br>Team, please review the uploaded policy document in our shared SharePoint site.",
+      isTrap: false,
+      reason: "SAFE! Comes from an internal address and directs you to standard internal shared storage without suspicious external links."
+    },
+    {
+      type: "📧 EMAIL INTERCEPT (Whaling / Executive Pretexting)",
+      body: "<strong>From:</strong> CEO &lt;exec-office-direct@gmail.com&gt;<br><strong>Subject:</strong> URGENT: Wire Transfer<br>I'm stuck in a board meeting. Need you to process a quick vendor wire gift card payment right now. Keep this quiet.",
+      isTrap: true,
+      reason: "TRAP! Executive impersonation sent from a personal Gmail account requesting urgent, secret financial transactions."
+    },
+    {
+      type: "📲 SMS INTERCEPT (Smishing)",
+      body: "<strong>[UPS Delivery]:</strong> Package delivery blocked due to missing house number. Update info here: <u>bit.ly/3x9Z_ups</u>",
+      isTrap: true,
+      reason: "TRAP! Classic smishing using shortened links to harvest personal details."
+    }
+  ];
+
+  let currentIdx = 0;
+  let score = 0;
+  let userEmail = "";
+
+  function startGame() {
+    const input = document.getElementById('agent-email').value;
+    if (!input || !input.includes('@')) {
+      alert('Please enter a valid work email.');
+      return;
+    }
+    userEmail = input;
+    document.getElementById('hud-email').innerText = userEmail.split('@')[0];
+    document.getElementById('screen-login').classList.add('hidden');
+    document.getElementById('screen-game').classList.remove('hidden');
+    loadIntercept();
+  }
+
+  function loadIntercept() {
+    const data = intercepts[currentIdx];
+    document.getElementById('intercept-type').innerText = data.type;
+    document.getElementById('intercept-body').innerHTML = data.body;
+    document.getElementById('action-buttons').classList.remove('hidden');
+    document.getElementById('feedback-box').style.display = 'none';
+    document.getElementById('next-btn').classList.add('hidden');
+  }
+
+  function makeChoice(userSaidTrap) {
+    const data = intercepts[currentIdx];
+    const isCorrect = (userSaidTrap === data.isTrap);
+    const feedbackBox = document.getElementById('feedback-box');
+
+    if (isCorrect) {
+      score += 100;
+      feedbackBox.className = "feedback feedback-success";
+      feedbackBox.innerHTML = "<strong>✅ INTEL CORRECT!</strong> " + data.reason;
+    } else {
+      feedbackBox.className = "feedback feedback-fail";
+      feedbackBox.innerHTML = "<strong>❌ BITTEN BY THE TRAP!</strong> " + data.reason;
+    }
+
+    document.getElementById('hud-score').innerText = score;
+    document.getElementById('action-buttons').classList.add('hidden');
+    feedbackBox.style.display = 'block';
+    document.getElementById('next-btn').classList.remove('hidden');
+  }
+
+  function nextIntercept() {
+    currentIdx++;
+    if (currentIdx < intercepts.length) {
+      loadIntercept();
+    } else {
+      endGame();
+    }
+  }
+
+  function endGame() {
+    document.getElementById('screen-game').classList.add('hidden');
+    document.getElementById('screen-results').classList.remove('hidden');
+    document.getElementById('final-score').innerText = score;
+
+    let rank = "Field Trainee";
+    if (score >= 400) rank = "Ghost-Level Counter-Intel Operative 🕵️‍♂️";
+    else if (score >= 200) rank = "Vigilant Agent 🛡️";
+    document.getElementById('rank-badge').innerText = "RANK: " + rank;
+
+    // Send data to Google Sheets Apps Script
+    if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== "https://script.google.com/a/macros/coupa.com/s/AKfycbzhAPT1MjbV5bzEj3fNMmYciWTti4jOXousO2eHm36c/dev") {
+      fetch(GOOGLE_SCRIPT_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: userEmail, score: score })
+      });
+    }
+  }
+
+  function copySlackShare() {
+    const text = `🕵️ *OPERATION GHOST PROTOCOL COMPLETED*\nI scored *${score}/400 PTS* on Week 1's Counter-Intel Game! Can you beat my score, Agents?\n👉 Play here: ${GAME_URL}`;
+    navigator.clipboard.writeText(text).then(() => {
+      document.getElementById('slack-copied').style.display = 'block';
+    });
+  }
+</script>
+
+</body>
+</html>
