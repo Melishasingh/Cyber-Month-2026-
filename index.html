@@ -193,8 +193,8 @@
 </div>
 
 <script>
-  // CONFIGURATION: Replace with your Google Apps Script Web App URL
-  const GOOGLE_SCRIPT_URL = "YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL";
+  // CONFIGURATION: Google Apps Script Endpoint
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/a/macros/coupa.com/s/AKfycbyhIEkvNZAOY6Pm9RZ4LZWp9y8LzPEQXDGXJvBLwCU6tii0zBNzIVb82UsBjpLiIWDA2g/exec";
   const GAME_URL = window.location.href;
 
   const intercepts = [
@@ -290,7 +290,7 @@
     document.getElementById('rank-badge').innerText = "RANK: " + rank;
 
     // Send data to Google Sheets Apps Script
-    if const GOOGLE_SCRIPT_URL = ("https://script.google.com/a/macros/coupa.com/s/AKfycbyhIEkvNZAOY6Pm9RZ4LZWp9y8LzPEQXDGXJvBLwCU6tii0zBNzIVb82UsBjpLiIWDA2g/exec") {
+    if (GOOGLE_SCRIPT_URL) {
       fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
