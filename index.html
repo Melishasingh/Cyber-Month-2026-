@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -193,8 +194,8 @@
 </div>
 
 <script>
-  // CONFIGURATION: Google Apps Script Endpoint
-  const GOOGLE_SCRIPT_URL = "https://script.google.com/a/macros/coupa.com/s/AKfycbyhIEkvNZAOY6Pm9RZ4LZWp9y8LzPEQXDGXJvBLwCU6tii0zBNzIVb82UsBjpLiIWDA2g/exec";
+  // CONFIGURATION: Google Apps Script Web App Endpoint
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/a/macros/coupa.com/s/AKfycbz3M3Kx9jdGC2ppNX6n-hCagvp58kycK5mCUq8pwUpc6IFi6GTZRFJ-MqyUT7V0IAGq/exec";
   const GAME_URL = window.location.href;
 
   const intercepts = [
@@ -289,12 +290,12 @@
     else if (score >= 200) rank = "Vigilant Agent 🛡️";
     document.getElementById('rank-badge').innerText = "RANK: " + rank;
 
-    // Send data to Google Sheets Apps Script
+    // Send payload using text/plain to bypass CORS preflight checks in Google Workspace
     if (GOOGLE_SCRIPT_URL) {
       fetch(GOOGLE_SCRIPT_URL, {
         method: 'POST',
         mode: 'no-cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'text/plain' },
         body: JSON.stringify({ email: userEmail, score: score })
       });
     }
@@ -310,3 +311,5 @@
 
 </body>
 </html>
+
+```
