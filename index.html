@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -193,9 +192,14 @@
   </div>
 </div>
 
+<!-- HIDDEN FORM BRIDGE TO BYPASS GOOGLE WORKSPACE CORS LOCK -->
+<iframe name="hidden_iframe" id="hidden_iframe" style="display:none;"></iframe>
+<form id="gform" action="https://script.google.com/a/macros/coupa.com/s/AKfycbz3M3Kx9jdGC2ppNX6n-hCagvp58kycK5mCUq8pwUpc6IFi6GTZRFJ-MqyUT7V0IAGq/exec" method="POST" target="hidden_iframe" style="display:none;">
+  <input type="hidden" name="email" id="form-email">
+  <input type="hidden" name="score" id="form-score">
+</form>
+
 <script>
-  // CONFIGURATION: Google Apps Script Web App Endpoint
-  const GOOGLE_SCRIPT_URL = "https://script.google.com/a/macros/coupa.com/s/AKfycbz3M3Kx9jdGC2ppNX6n-hCagvp58kycK5mCUq8pwUpc6IFi6GTZRFJ-MqyUT7V0IAGq/exec";
   const GAME_URL = window.location.href;
 
   const intercepts = [
@@ -290,15 +294,10 @@
     else if (score >= 200) rank = "Vigilant Agent 🛡️";
     document.getElementById('rank-badge').innerText = "RANK: " + rank;
 
-    // Send payload using text/plain to bypass CORS preflight checks in Google Workspace
-    if (GOOGLE_SCRIPT_URL) {
-      fetch(GOOGLE_SCRIPT_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ email: userEmail, score: score })
-      });
-    }
+    // Submit form silently to Google Sheet via hidden iframe
+    document.getElementById('form-email').value = userEmail;
+    document.getElementById('form-score').value = score;
+    document.getElementById('gform').submit();
   }
 
   function copySlackShare() {
@@ -311,5 +310,3 @@
 
 </body>
 </html>
-
-```
