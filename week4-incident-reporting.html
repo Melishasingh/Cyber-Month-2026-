@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 4 — Coupa Cyber Arcade</title>
+<link rel="stylesheet" href="arcade.css">
+<style>
+  .meters{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+  .m{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px 14px}
+  .m .k{font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--dimmer)}
+  .m .v{font-size:22px;font-weight:600;line-height:29px}
+  .m .bar{height:5px;border-radius:99px;background:rgba(255,255,255,.11);margin-top:7px;overflow:hidden}
+  .m .bar i{display:block;height:100%;transition:width .55s cubic-bezier(.2,.8,.2,1)}
+  .m.good .v{color:var(--pistachio)} .m.good .bar i{background:var(--pistachio)}
+  .m.mid .v{color:var(--robin)}     .m.mid .bar i{background:var(--robin)}
+  .m.bad .v{color:var(--white)}     .m.bad .bar i{background:var(--white)}
+  @media(max-width:640px){.meters{grid-template-columns:1fr}}
+
+  .clockbar{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:#04122F;border:1px solid var(--line);border-radius:11px;padding:12px 16px;margin-bottom:18px;
+    flex-wrap:wrap}
+  .clockbar .t{font-size:25px;font-weight:600;color:var(--robin);font-family:ui-monospace,Menlo,monospace}
+  .clockbar .lbl{font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--dimmer)}
+
+  .scene{background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--robin);
+    border-radius:12px;padding:22px 24px;font-size:16px;line-height:27px}
+  .scene .sh{font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--robin);margin-bottom:10px}
+  .scene p{margin-bottom:12px} .scene p:last-child{margin-bottom:0}
+  .scene em{color:var(--white);font-style:normal;font-weight:500}
+
+  .opts{display:grid;gap:10px;margin-top:16px}
+  .opt{text-align:left;background:var(--panel);border:1px solid var(--line);color:var(--white);
+    border-radius:11px;padding:16px 19px;cursor:pointer;font-family:var(--font);font-size:15px;
+    line-height:24px;transition:.14s;display:flex;gap:13px;align-items:flex-start;width:100%}
+  .opt:hover:not(:disabled){border-color:var(--robin);background:rgba(95,214,255,.09);transform:translateX(3px)}
+  .opt:disabled{cursor:default;opacity:.6}
+  .opt .kb{flex:none;width:25px;height:25px;border-radius:7px;background:rgba(95,214,255,.16);
+    color:var(--robin);display:grid;place-items:center;font-size:12px;font-weight:600}
+  .opt .cost{display:block;font-size:11px;color:var(--dimmer);margin-top:5px;letter-spacing:.04em}
+  .opt.chosen{border-color:var(--robin);background:rgba(95,214,255,.13);opacity:1}
+  .opt.ideal{border-color:var(--pistachio);background:rgba(150,234,170,.11);opacity:1}
+
+  .delta{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .delta span{font-size:12px;font-weight:600;padding:4px 10px;border-radius:99px;
+    background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15)}
+  .delta span.up{color:var(--pistachio);border-color:rgba(150,234,170,.35);background:rgba(150,234,170,.12)}
+  .delta span.down{color:var(--robin);border-color:rgba(95,214,255,.35);background:rgba(95,214,255,.12)}
+
+  .caseshut{background:var(--panel);border:1px solid var(--line-strong);border-radius:12px;padding:26px}
+  .caseshut h4{margin-bottom:10px}
+  .pathlist{margin:14px 0 0 0;list-style:none}
+  .pathlist li{padding:11px 0 11px 16px;border-left:2px solid var(--line);font-size:14px;line-height:22px}
+  .pathlist li.g{border-left-color:var(--pistachio)}
+  .pathlist li b{display:block;font-weight:500;color:var(--white);font-size:15px}
+  .pathlist li span{color:var(--dim)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="topbar"></div>
+  <div id="start"></div>
+  <div id="stage" class="hidden"></div>
+  <div id="results" class="hidden"></div>
+  <footer id="foot"></footer>
+</div>
+
+<script src="config.js"></script>
+<script src="arcade.js"></script>
+<script>
+(function(){
+'use strict';
+var A = window.Arcade, esc = A.esc;
+
+/* Each decision: q = quality 0..100. d = meter deltas.
+   contain (higher better), evidence (higher better), exposure (lower better), mins (clock cost). */
+
+var CASES = [
+{
+  title:'Case 01 — The Taxi',
+  brief:'19:40, Friday. You are at the airport. Your work laptop is not in your bag. You last had it in the taxi.',
+  start:{contain:15, evidence:100, exposure:0},
+  steps:[
+  {
+    sh:'19:41 · Arrivals hall',
+    text:'<p>Bag open on the floor, laptop gone. It was <em>asleep, not shut down</em>. On the desktop is a CRM export you pulled this morning &mdash; <em>about 4,000 customer contacts with contract values</em>.</p>'+
+         '<p>The taxi has gone. Your phone has 40% battery.</p>',
+    prompt:'What is your first action?',
+    opts:[
+      {t:'Report it to security and IT right now, through the number or app you already have saved.', q:100,
+       d:{contain:45, mins:2},
+       fb:'Correct, and the single most valuable thing you will do tonight. Reporting is what starts remote wipe, session revocation and the disclosure clock. Minutes matter, and nobody has ever been disciplined for reporting fast.'},
+      {t:'Open Find My Device first so you have something concrete to tell them.', q:45,
+       d:{contain:15, mins:14},
+       fb:'Understandable, and not harmful — but you spent fourteen minutes gathering detail security could have gathered themselves while also wiping the device. Report first, investigate second.'},
+      {t:'Message your team channel to ask who you should contact.', q:20,
+       d:{contain:5, mins:26, exposure:200},
+       fb:'You have now told nine colleagues and no responder. Team channels are not an incident channel — on a Friday night, this sits unread. Know your reporting route before you need it.'},
+      {t:'Wait until Monday. It is Friday night, nobody is on, and it might turn up.', q:0,
+       d:{contain:-15, mins:3720, exposure:4000},
+       fb:'This is the choice that turns an incident into a breach. Security operates around the clock precisely because attackers do, and a 62-hour delay can move a notifiable incident into regulatory-penalty territory.'}
+    ]
+  },
+  {
+    sh:'19:52 · On the phone with the on-call responder',
+    text:'<p>"Thanks for calling this in. I need to know exactly what was on it."</p>'+
+         '<p>You are suddenly aware that the CRM export probably should not have been sitting on your desktop.</p>',
+    prompt:'What do you tell them?',
+    opts:[
+      {t:'Everything, specifically: the CRM export, roughly 4,000 records, what fields it held, and that the machine was asleep rather than off.', q:100,
+       d:{contain:25, evidence:0},
+       fb:'Exactly right. Responders size the blast radius from what you tell them; a vague answer forces them to assume the worst and escalate accordingly. Being specific about your own mistake is the professional move, not the risky one.'},
+      {t:'Mention the laptop was lost but leave out the export — you will clean it up later.', q:0,
+       d:{contain:-20, evidence:-45, exposure:4000},
+       fb:'The omission is now the incident. Responders scope the response to what you said, so 4,000 customers go unprotected — and when the export surfaces in forensics, as it will, the concealment is what people remember.'},
+      {t:'Say you are not sure what was on it and you will check your files on Monday.', q:25,
+       d:{contain:5, mins:20, exposure:800},
+       fb:'Not dishonest, but it stalls the response. "I am not certain, but I believe there was a CRM export of roughly four thousand records" is far more useful than silence.'},
+      {t:'Tell them, and also flag that having that export locally was against policy.', q:100,
+       d:{contain:25, evidence:5},
+       fb:'The best version of the answer. You have given them the scope and handed the organisation a control gap worth fixing. Incidents that surface a systemic issue are worth more than incidents that just get closed.'}
+    ]
+  },
+  {
+    sh:'21:15 · An unknown number calls',
+    text:'<p>"Hello &mdash; taxi lost property. We have a laptop. To confirm it is yours, <em>can you give me the login password</em> so we can open it and check the name?"</p>',
+    prompt:'How do you respond?',
+    opts:[
+      {t:'Refuse, end the call, and report the call itself to security as part of the same incident.', q:100,
+       d:{contain:20, evidence:10},
+       fb:'Right. Nobody needs your password to identify a laptop, and the timing suggests whoever has the device is now working on you. The call is evidence — reporting it may be what links the theft to a targeted attack.'},
+      {t:'Give it — better a lost-property clerk opens it than a criminal.', q:0,
+       d:{contain:-40, exposure:4000, evidence:-20},
+       fb:'You have just handed over the encryption you were relying on. There is no legitimate scenario in which anyone needs your password over the phone; this was social engineering following up on a physical theft.'},
+      {t:'Give a hint rather than the password, so they can identify it without full access.', q:10,
+       d:{contain:-20, exposure:1500},
+       fb:'A hint is a portion of the secret. Partial disclosure narrows the search space enormously — and there was no reason to disclose anything.'},
+      {t:'Ask them to hold the device and say a colleague will collect it, then verify the lost-property office independently.', q:80,
+       d:{contain:10, mins:12},
+       fb:'Sensible instinct and no disclosure. Slightly behind the best answer only because you handled it alone rather than looping in the responder who is already on this case.'}
+    ]
+  }],
+  ideal:'Report within minutes through a route you already knew. Give responders a complete, specific inventory even when it exposes your own mistake. Treat any follow-up contact asking for credentials as part of the attack.'
+},
+{
+  title:'Case 02 — The Click',
+  brief:'09:12, Tuesday. You entered your password on a page that looked exactly like the company sign-in screen. It was not.',
+  start:{contain:10, evidence:100, exposure:0},
+  steps:[
+  {
+    sh:'09:12 · Two seconds after you hit enter',
+    text:'<p>The page spun, then redirected to the real intranet. Your stomach drops. The URL you typed into was <em>login.coupa-sso-verify.net</em>.</p>'+
+         '<p>Nothing appears to have happened.</p>',
+    prompt:'What do you do?',
+    opts:[
+      {t:'Report it immediately, then change your password from a different device you trust and ask for all active sessions to be revoked.', q:100,
+       d:{contain:50, mins:3},
+       fb:'The complete answer. Session revocation is the part people forget: if the attacker already holds a valid session token, a new password alone does not evict them. And reporting from the start means someone competent is watching your account.'},
+      {t:'Change your password quietly and get on with your day.', q:40,
+       d:{contain:20, mins:6, exposure:400},
+       fb:'Better than nothing, and it misses two things: live sessions survive a password change, and security never learns that a convincing lookalike domain is actively hitting your colleagues.'},
+      {t:'Nothing. You closed the tab within a second or two, so it cannot have registered.', q:0,
+       d:{contain:-10, mins:180, exposure:2500},
+       fb:'Credentials are captured on submit, not on page close. Automated kits use them within minutes. "I closed it fast" is the most common reason incidents get reported hours late.'},
+      {t:'Investigate the domain first so you can tell security something useful.', q:35,
+       d:{contain:10, mins:22, exposure:300},
+       fb:'Your credentials are live in an attacker\'s hands while you research. Report first — the domain analysis is their job and takes them ninety seconds.'}
+    ]
+  },
+  {
+    sh:'09:19 · Your phone starts buzzing',
+    text:'<p>MFA approval requests. One. Then another. Then six more in ninety seconds. Each one asks you to approve a sign-in.</p>'+
+         '<p>Your phone is now vibrating continuously and you are late for a meeting.</p>',
+    prompt:'What do you do?',
+    opts:[
+      {t:'Deny every prompt, report the push flood as part of the same incident, and do not approve one to make it stop.', q:100,
+       d:{contain:30, evidence:15},
+       fb:'Right. This is MFA fatigue: they have your password and are betting you will tap approve out of irritation or by accident. The flood also confirms the credentials are compromised — useful, reportable evidence.'},
+      {t:'Approve one so the buzzing stops, then change your password straight after.', q:0,
+       d:{contain:-50, exposure:3000, evidence:-10},
+       fb:'That single approval is the entire attack. The attacker is now inside with a valid session, and they will register their own MFA device before you finish typing the new password.'},
+      {t:'Put the phone on silent and deal with it after your meeting.', q:25,
+       d:{contain:-5, mins:45, exposure:900},
+       fb:'You stopped approving, which matters. But you also stopped watching, and you left a live attack running for forty-five minutes without telling anyone.'},
+      {t:'Deny them all and turn the phone face down, without reporting the flood specifically.', q:60,
+       d:{contain:10},
+       fb:'The denials are correct. Reporting the flood is what tells responders this is an active, targeted attempt rather than a single unlucky click — it changes how urgently they treat your account.'}
+    ]
+  },
+  {
+    sh:'09:34 · Your manager pulls you aside',
+    text:'<p>"Look &mdash; I get it, but we are three days from the audit. If this goes to security it becomes a whole thing. <em>Can we just handle it in the team and not escalate?</em>"</p>',
+    prompt:'What do you do?',
+    opts:[
+      {t:'Explain that it is already reported and has to be, then offer to help with whatever the audit needs.', q:100,
+       d:{contain:20, evidence:20},
+       fb:'Right, and not easy. Incident reporting is not discretionary and does not belong to your reporting line. Note that you did not pick a fight — you stated the obligation and offered help on the thing they were actually worried about.'},
+      {t:'Agree to keep it in the team. They are your manager and they know the wider context.', q:0,
+       d:{contain:-45, exposure:3500, evidence:-40},
+       fb:'The pressure is understandable and the outcome is the worst in this case. An unreported live compromise three days before an audit is precisely the scenario that turns a contained incident into a disclosed breach — and the concealment lands on you both.'},
+      {t:'Say nothing, but privately make sure it reaches security anyway.', q:70,
+       d:{contain:15, evidence:5},
+       fb:'The right outcome by a route that leaves your manager blindsided and the relationship damaged. Saying plainly "I have to report this" is almost always available and almost always better.'},
+      {t:'Escalate over their head to their manager immediately.', q:45,
+       d:{contain:10, mins:25},
+       fb:'The instinct to not comply is sound, but this jumps a step. Report the incident through the security route, and if the pressure continues, that is when the reporting line and HR get involved.'}
+    ]
+  },
+  {
+    sh:'11:05 · Security asks for the original email',
+    text:'<p>"Can you send us the message that linked to it? Do not forward it as normal text &mdash; we need the headers."</p>'+
+         '<p>You had already deleted it, out of embarrassment. It is still in Deleted Items.</p>',
+    prompt:'What do you do?',
+    opts:[
+      {t:'Recover it from Deleted Items, use the Report Phishing button so headers are preserved, and tell them you had deleted it.', q:100,
+       d:{evidence:25, contain:10},
+       fb:'Exactly right. Headers are how responders find every other recipient, and the report button preserves them where a normal forward strips them. Mentioning the deletion saves them hunting for something they think is missing.'},
+      {t:'Copy the text into a new email and send that.', q:50,
+       d:{evidence:-15},
+       fb:'Some information is better than none, but you have thrown away the routing data. That is the difference between protecting you and protecting the two hundred colleagues who got the same message.'},
+      {t:'Empty Deleted Items so no trace of the mistake remains.', q:0,
+       d:{evidence:-60, contain:-15, exposure:1200},
+       fb:'Destroying evidence during a live incident is the most damaging thing in this entire case. It blinds the response, and it converts an honest mistake into something that looks deliberate.'},
+      {t:'Tell them it is gone and you cannot retrieve it.', q:20,
+       d:{evidence:-30, mins:30},
+       fb:'It was recoverable and you had it. When you are not sure whether something can be retrieved, say that rather than closing the door.'}
+    ]
+  }],
+  ideal:'Report in the first minute, revoke sessions as well as changing the password, deny every push and report the flood, hold the reporting obligation under pressure, and preserve evidence instead of tidying it away.'
+},
+{
+  title:'Case 03 — The Anomaly',
+  brief:'14:20, Wednesday. You were not looking for a security problem. You found one anyway.',
+  start:{contain:20, evidence:100, exposure:0},
+  steps:[
+  {
+    sh:'14:20 · A link a colleague pasted last month',
+    text:'<p>It opens without a login prompt. It is a shared folder of <em>supplier onboarding documents &mdash; bank details, signed contracts, ID scans</em>. Roughly 900 files.</p>'+
+         '<p>You are not sure whether it is meant to be open. Nobody else seems to have noticed.</p>',
+    prompt:'What do you do?',
+    opts:[
+      {t:'Report it to security with the link and how you found it, and do not open, download or change anything further.', q:100,
+       d:{contain:40, evidence:15, mins:4},
+       fb:'Right on both counts. You gave them what they need to act, and you did not contaminate the scene. Access logs are how they establish whether anyone outside has already been in — every extra click of yours makes that harder to read.'},
+      {t:'Download a sample so you have proof in case the link is taken down.', q:20,
+       d:{contain:5, exposure:900, evidence:-20},
+       fb:'Well-intentioned and counterproductive. You have made an uncontrolled second copy of the most sensitive data in the case, on your own device, and added your fingerprints to the audit trail.'},
+      {t:'Fix the permissions yourself — you have edit rights and it takes ten seconds.', q:30,
+       d:{contain:20, evidence:-45},
+       fb:'It closes the hole and destroys the ability to answer the only question that matters: did anyone else get in first? Report it and let responders capture the logs before the configuration changes.'},
+      {t:'Post the link in a team channel to ask whether it is supposed to be public.', q:0,
+       d:{contain:-10, exposure:1400, evidence:-15},
+       fb:'You have widened the exposure while trying to assess it. Never redistribute a leak to triage it — that channel may be externally accessible, archived, or read by more people than you think.'}
+    ]
+  },
+  {
+    sh:'15:05 · While security is still investigating',
+    text:'<p>A note appears in the same shared drive: <em>"Your files are encrypted. 48 hours."</em> Documents around it are turning into files you cannot open.</p>'+
+         '<p>Your instinct is to yank the power cable out of your machine.</p>',
+    prompt:'What do you do?',
+    opts:[
+      {t:'Disconnect from the network but leave the machine powered on, and tell the responders immediately what you are seeing.', q:100,
+       d:{contain:40, evidence:20, mins:2},
+       fb:'Correct, and a genuinely counter-intuitive answer. Disconnecting stops the spread; staying powered on preserves memory and running processes, which is often where the encryption keys and the initial access route are found.'},
+      {t:'Shut the machine down hard to stop the encryption.', q:40,
+       d:{contain:25, evidence:-50},
+       fb:'It does slow the encryption, and it destroys volatile evidence — sometimes including recoverable keys. Pull the network, not the power, unless a responder tells you otherwise.'},
+      {t:'Start deleting the encrypted files to stop it spreading.', q:0,
+       d:{contain:-20, evidence:-60, exposure:500},
+       fb:'Deletion does not stop ransomware and it destroys files that decryption or backups might have recovered. It also erases the pattern responders use to scope the infection.'},
+      {t:'Look for a contact address in the note so someone can open a channel with them.', q:10,
+       d:{contain:-10, mins:35},
+       fb:'Not your call to make, and not your risk to take. Negotiation, if it happens at all, is a legal and executive decision. Your job in this minute is containment and reporting.'}
+    ]
+  },
+  {
+    sh:'17:40 · An email lands in your inbox',
+    text:'<p>"Hi &mdash; I write for a trade publication. I understand you have had a <em>data incident involving supplier records</em>. Can you confirm how many suppliers are affected? Happy to keep you anonymous."</p>',
+    prompt:'How do you respond?',
+    opts:[
+      {t:'Do not reply. Forward it to security and communications, and tell them it arrived.', q:100,
+       d:{contain:15, evidence:10},
+       fb:'Right. That someone outside already knows is itself important intelligence about how far this has travelled. Only designated people speak publicly during an incident — not because of secrecy, but because early numbers are almost always wrong.'},
+      {t:'Reply anonymously with a rough figure so the coverage is at least accurate.', q:0,
+       d:{contain:-25, exposure:900, evidence:-10},
+       fb:'Your figure would be wrong &mdash; the investigation is hours old &mdash; and an unauthorised disclosure of an unconfirmed breach can create regulatory and contractual problems well beyond the original incident. Anonymity here is not real.'},
+      {t:'Reply that you cannot comment and they should contact the press office.', q:65,
+       d:{contain:5},
+       fb:'Harmless and polite. Forwarding without replying is still better: any response confirms they reached a real person on the inside, which is often exactly what they were testing.'},
+      {t:'Ignore and delete it.', q:35,
+       d:{evidence:-15},
+       fb:'You avoided the disclosure, and you also withheld the fact that this has leaked outside the company. That is information the incident team needs today, not next week.'}
+    ]
+  },
+  {
+    sh:'Thursday, 10:00 · The debrief',
+    text:'<p>The folder was misconfigured for eleven months. The ransomware was contained to two machines. No evidence of external access to the supplier files.</p>'+
+         '<p>Someone asks: "Anything else anyone noticed and did not raise?"</p>'+
+         '<p>Three weeks ago you got an odd MFA prompt you never approved. Nothing came of it. You never mentioned it.</p>',
+    prompt:'Do you say something?',
+    opts:[
+      {t:'Raise it. A near miss with no consequences is still a data point, and you would rather look over-cautious than sit on it twice.', q:100,
+       d:{contain:15, evidence:15},
+       fb:'The right instinct and the hardest one to build. Unapproved MFA prompts are often the first visible sign of credential compromise; a cluster of "nothing came of it" reports is frequently how a campaign gets detected at all.'},
+      {t:'Stay quiet. Nothing happened, and raising it now looks like you sat on something.', q:0,
+       d:{evidence:-25},
+       fb:'This is exactly the reflex that lets the next incident run undetected. Nobody in that room cares that it is three weeks old; they care whether it matches anything else they are seeing.'},
+      {t:'Mention it privately to one responder afterwards.', q:75,
+       d:{evidence:5},
+       fb:'It gets reported, which is what matters most. Saying it in the room is better still — someone else almost certainly saw the same thing and is waiting to hear that it counts.'},
+      {t:'Raise it, and add that you were unsure whether it was worth reporting at the time.', q:100,
+       d:{contain:15, evidence:20},
+       fb:'The strongest answer. You have reported the event and named the real problem: people cannot tell what is worth reporting. That feedback changes guidance for everyone.'}
+    ]
+  }],
+  ideal:'Report without touching the scene, pull the network and not the power, route external enquiries to the people whose job it is, and raise near misses even when nothing came of them.'
+}];
+
+/* ================= ENGINE ================= */
+var ci=0, si=0, raw=0, rawMax=0, good=0, total=0, review=[], M=null, mins=0, caseLog=[];
+
+function start(){
+  rawMax = CASES.reduce(function(s,c){ return s + c.steps.length*100; },0);
+  caseIntro();
+}
+
+function meterClass(v){ return v>=70?'good':v>=40?'mid':'bad'; }
+
+function meters(){
+  var expPct = A.clamp(100 - (M.exposure/40), 0, 100);
+  return '<div class="meters">'+
+    '<div class="m '+meterClass(M.contain)+'"><div class="k">Containment</div><div class="v">'+Math.round(M.contain)+'%</div>'+
+      '<div class="bar"><i style="width:'+A.clamp(M.contain,0,100)+'%"></i></div></div>'+
+    '<div class="m '+meterClass(expPct)+'"><div class="k">Records exposed</div><div class="v">'+M.exposure.toLocaleString()+'</div>'+
+      '<div class="bar"><i style="width:'+(100-expPct)+'%"></i></div></div>'+
+    '<div class="m '+meterClass(M.evidence)+'"><div class="k">Evidence integrity</div><div class="v">'+Math.round(M.evidence)+'%</div>'+
+      '<div class="bar"><i style="width:'+A.clamp(M.evidence,0,100)+'%"></i></div></div>'+
+  '</div>';
+}
+function fmtMins(m){
+  if (m < 60) return m+'m';
+  if (m < 1440) return Math.floor(m/60)+'h '+(m%60)+'m';
+  return Math.floor(m/1440)+'d '+Math.floor((m%1440)/60)+'h';
+}
+
+function caseIntro(){
+  if (ci >= CASES.length) return done();
+  var Cs = CASES[ci];
+  M = {contain:Cs.start.contain, evidence:Cs.start.evidence, exposure:Cs.start.exposure};
+  mins = 0; si = 0; caseLog = [];
+  A.el('stage').innerHTML =
+    '<div class="panel fadein" style="padding:34px">'+
+      '<div class="eyebrow">Incident '+(ci+1)+' of '+CASES.length+'</div>'+
+      '<h2 style="margin:8px 0 12px">'+esc(Cs.title)+'</h2>'+
+      '<p class="lead">'+esc(Cs.brief)+'</p>'+
+      '<div class="row" style="margin-top:26px"><button class="btn primary lg" id="beginBtn">Take the shift &nbsp;&rarr;</button></div>'+
+    '</div>';
+  A.el('beginBtn').onclick = function(){ A.SFX.select(); step(); };
+}
+
+function step(){
+  var Cs = CASES[ci];
+  if (si >= Cs.steps.length) return caseClose();
+  var S = Cs.steps[si];
+  var opts = A.shuffle(S.opts);
+
+  A.el('stage').innerHTML =
+    A.hud([
+      ['Score','<span id="hScore">'+Math.round(raw)+'</span>','robin'],
+      ['Incident',(ci+1)+' / '+CASES.length,''],
+      ['Decision',(si+1)+' / '+Cs.steps.length,''],
+      ['Elapsed',fmtMins(mins),'']
+    ]) +
+    meters() +
+    '<div class="scene fadein"><div class="sh">'+esc(S.sh)+'</div>'+S.text+'</div>'+
+    '<h4 style="margin:20px 0 0">'+esc(S.prompt)+'</h4>'+
+    '<div class="opts" id="opts">'+opts.map(function(o,i){
+      return '<button class="opt" data-i="'+i+'"><span class="kb">'+String.fromCharCode(65+i)+'</span>'+
+        '<span>'+esc(o.t)+'</span></button>';
+    }).join('')+'</div>'+
+    '<div id="fb" style="margin-top:16px"></div>';
+
+  Array.prototype.forEach.call(document.querySelectorAll('#opts .opt'), function(b){
+    b.onclick = function(){ choose(opts, +b.dataset.i, S, Cs); };
+  });
+}
+
+function choose(opts, i, S, Cs){
+  var o = opts[i], d = o.d || {};
+  raw += o.q; total++;
+  if (o.q >= 80){ good++; A.SFX.great(); } else if (o.q >= 40){ A.SFX.good(); } else { A.SFX.bad(); }
+
+  var chips = [];
+  if (d.contain){ M.contain = A.clamp(M.contain + d.contain, 0, 100);
+    chips.push('<span class="'+(d.contain>0?'up':'down')+'">Containment '+(d.contain>0?'+':'')+d.contain+'</span>'); }
+  if (d.evidence){ M.evidence = A.clamp(M.evidence + d.evidence, 0, 100);
+    chips.push('<span class="'+(d.evidence>0?'up':'down')+'">Evidence '+(d.evidence>0?'+':'')+d.evidence+'</span>'); }
+  if (d.exposure){ M.exposure += d.exposure;
+    chips.push('<span class="down">Records exposed +'+d.exposure.toLocaleString()+'</span>'); }
+  if (d.mins){ mins += d.mins; chips.push('<span class="down">Clock +'+fmtMins(d.mins)+'</span>'); }
+  chips.push('<span class="'+(o.q>=80?'up':'')+'">Decision quality '+o.q+'/100</span>');
+
+  var ideal = S.opts.reduce(function(a,b){ return b.q > a.q ? b : a; }, S.opts[0]);
+
+  Array.prototype.forEach.call(document.querySelectorAll('#opts .opt'), function(b){
+    b.disabled = true;
+    var oo = opts[+b.dataset.i];
+    if (oo === o) b.classList.add('chosen');
+    else if (oo.q === 100 && o.q < 100) b.classList.add('ideal');
+  });
+
+  A.el('fb').innerHTML =
+    '<div class="verdict '+(o.q>=80?'ok':'no')+'">'+
+      '<div class="vh">'+(o.q>=80?'✓ Strong call':(o.q>=40?'~ Partly right':'✕ Costly'))+
+        ' <span class="chip'+(o.q>=80?' good':'')+'">+'+o.q+'</span></div>'+
+      '<p>'+esc(o.fb)+'</p>'+
+      '<div class="delta">'+chips.join('')+'</div>'+
+      (o.q < 100 ? '<div class="why"><strong>Best available:</strong> '+esc(ideal.t)+'</div>' : '')+
+      '<button class="btn primary" id="nextBtn" style="margin-top:16px">Continue &rarr;</button>'+
+    '</div>';
+
+  caseLog.push({q:o.q, chose:o.t, best:ideal.t, sh:S.sh});
+  A.el('hScore').textContent = Math.round(raw);
+  A.el('nextBtn').onclick = function(){ si++; A.SFX.select(); step(); window.scrollTo({top:0,behavior:'smooth'}); };
+  A.el('nextBtn').focus();
+}
+
+function caseClose(){
+  var Cs = CASES[ci];
+  var avg = Math.round(caseLog.reduce(function(s,x){ return s+x.q; },0)/caseLog.length);
+  var outcome = avg >= 90 ? 'Contained. This is what a well-run incident looks like.'
+              : avg >= 70 ? 'Contained, with avoidable cost.'
+              : avg >= 45 ? 'Escalated further than it needed to.'
+              : 'This became a breach. Every step of it was recoverable.';
+  (avg>=70?A.SFX.win:A.SFX.lose)();
+
+  A.el('stage').innerHTML =
+    meters() +
+    '<div class="caseshut fadein">'+
+      '<div class="eyebrow">Case closed</div>'+
+      '<h3 style="margin:6px 0 4px">'+esc(Cs.title)+'</h3>'+
+      '<p class="lead" style="font-size:18px">'+esc(outcome)+'</p>'+
+      '<div class="breakdown" style="margin-top:20px">'+
+        '<div class="b"><div class="k">Avg decision quality</div><div class="v">'+avg+'/100</div></div>'+
+        '<div class="b"><div class="k">Time to contain</div><div class="v">'+fmtMins(mins)+'</div></div>'+
+        '<div class="b"><div class="k">Records exposed</div><div class="v">'+M.exposure.toLocaleString()+'</div></div>'+
+      '</div>'+
+      '<h4 style="margin-top:24px">Your decisions</h4>'+
+      '<ul class="pathlist">'+caseLog.map(function(x){
+        return '<li class="'+(x.q>=80?'g':'')+'"><b>'+esc(x.sh)+' — '+x.q+'/100</b>'+
+          '<span>'+esc(x.chose)+'</span>'+
+          (x.q<100?'<span style="display:block;margin-top:5px;color:var(--robin)">Best: '+esc(x.best)+'</span>':'')+'</li>';
+      }).join('')+'</ul>'+
+      '<div class="verdict ok" style="margin-top:20px"><div class="vh">The playbook</div><p>'+esc(Cs.ideal)+'</p></div>'+
+      '<button class="btn primary lg" id="nextBtn" style="margin-top:22px">'+
+        (ci+1>=CASES.length?'See final results':'Next incident')+' &rarr;</button>'+
+    '</div>';
+
+  review.push({ok:avg>=80, q:Cs.title+' — '+avg+'/100', a:Cs.ideal});
+  A.el('nextBtn').onclick = function(){ ci++; A.SFX.select(); caseIntro(); window.scrollTo({top:0,behavior:'smooth'}); };
+}
+
+function done(){
+  A.finish({
+    score: Math.round(A.clamp(raw/rawMax,0,1)*1000),
+    maxScore: 1000,
+    accuracy: Math.round((good/total)*100),
+    statLabel:'Strong calls', statValue:good+' / '+total,
+    review: review
+  });
+}
+
+A.boot({
+  week:4, topic:'Incident Reporting', title:'Code Blue',
+  tagline:'Three incidents. Eleven decisions. No timer &mdash; because the thing being tested here is judgement under pressure, and the pressure is coming from people, not the clock.',
+  rounds:11, minutes:10, maxScore:1000,
+  brief:[
+    'Each decision moves three meters: <strong>containment</strong>, <strong>records exposed</strong> and <strong>evidence integrity</strong>. There is also a clock, and it is unforgiving.',
+    'Every option is something a reasonable person would actually do. Several are defensible. Only one is usually best.',
+    'You will get pushback &mdash; from a manager, from a caller, from your own embarrassment. That is the real content of this game.',
+    'Nothing here can be failed out of. Each case ends with your full decision path and the best available answer at every step.',
+    'One rule underpins all three cases: <strong>reporting early is never the wrong move</strong>, and nobody has ever been in trouble for it.'
+  ],
+  onStart:start
+});
+})();
+</script>
+</body>
+</html>

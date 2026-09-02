@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 1 — Coupa Cyber Arcade</title>
+<link rel="stylesheet" href="arcade.css">
+<style>
+  .msgcard{background:var(--panel-2);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  .msghead{padding:15px 20px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start}
+  .avatar{width:40px;height:40px;border-radius:11px;background:var(--royal);display:grid;place-items:center;
+    font-weight:600;font-size:15px;flex:none}
+  .msgmeta{flex:1;min-width:0}
+  .msgmeta .nm{font-weight:500;font-size:16px}
+  .msgmeta .ad{font-size:13px;color:var(--dim);word-break:break-all}
+  .chan{font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--robin);
+    border:1px solid var(--line-strong);border-radius:99px;padding:4px 10px;flex:none}
+  .msgsubj{padding:15px 20px 0;font-size:20px;font-weight:500;line-height:28px}
+  .msgbody{padding:14px 20px 22px;font-size:15px;line-height:26px;color:rgba(255,255,255,.9)}
+  .msgbody p{margin-bottom:13px}
+  .cell{cursor:pointer;border-radius:5px;padding:1px 3px;margin:0 -3px;
+    transition:background .14s ease,box-shadow .14s ease;display:inline}
+  .cell:hover{background:rgba(95,214,255,.15);box-shadow:0 0 0 1px var(--line-strong)}
+  .cell.flagged{background:rgba(95,214,255,.26);box-shadow:0 0 0 1px var(--robin);font-weight:500}
+  .cell.miss{background:rgba(255,255,255,.09);box-shadow:0 0 0 1px rgba(255,255,255,.2);text-decoration:line-through;
+    text-decoration-color:var(--dimmer)}
+  .cell.reveal{background:rgba(150,234,170,.2);box-shadow:0 0 0 1px var(--pistachio)}
+  .locked .cell{cursor:default}
+  .locked .cell:hover{background:none;box-shadow:none}
+  .fakelink{color:var(--robin);text-decoration:underline}
+  .attach{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;
+    padding:8px 13px;font-size:14px;margin-top:4px;background:rgba(255,255,255,.05)}
+  .qr{width:78px;height:78px;margin-top:8px;border-radius:8px;background:
+    repeating-conic-gradient(var(--white) 0 25%, var(--midnight) 0 50%) 0 0/13px 13px;border:5px solid var(--white)}
+  .actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+  .actions .btn{padding:16px 12px;font-size:15px;flex-direction:column;gap:4px;text-align:center;line-height:19px}
+  .actions .btn small{font-size:11px;font-weight:400;opacity:.72;letter-spacing:.02em}
+  @media(max-width:640px){.actions{grid-template-columns:1fr}}
+  .flagbar{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    font-size:13px;color:var(--dimmer);margin-top:12px;flex-wrap:wrap}
+  .hearts{letter-spacing:3px;font-size:18px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="topbar"></div>
+  <div id="start"></div>
+  <div id="stage" class="hidden"></div>
+  <div id="results" class="hidden"></div>
+  <footer id="foot"></footer>
+</div>
+
+<script src="config.js"></script>
+<script src="arcade.js"></script>
+<script>
+(function(){
+'use strict';
+var A = window.Arcade, esc = A.esc;
+
+/* c(text, isTell, explanation) — a clickable element inside a message.
+   isTell:true means flagging it earns points. */
+function c(text, isTell, why){
+  var i = TELLS.length;
+  TELLS.push({tell: !!isTell, why: why || ''});
+  return '<span class="cell" data-i="'+i+'">'+text+'</span>';
+}
+var TELLS = [];
+
+/* Each item's body is a function so TELLS indexes rebuild per render. */
+var ITEMS = [
+{
+  chan:'Email', from:'Microsoft 365 Security', addr:'no-reply@ms-0ffice365-alerts.com', initials:'M',
+  subj:function(){ return c('ACTION REQUIRED: Your password expires in 2 hours',1,'Manufactured deadlines exist to stop you thinking. Real password policies give you days and appear in the tool itself.'); },
+  body:function(){ return '<p>'+c('Dear User,',1,'A company system knows your name. "Dear User" means a list, not a colleague.')+'</p>'+
+    '<p>Our records indicate your Microsoft 365 credentials will expire today. '+
+    c('Failure to act will result in permanent loss of mailbox access.',1,'Threatened consequences plus a countdown is the classic pressure pattern.')+'</p>'+
+    '<p>'+c('<span class="fakelink">https://login.micros0ft-verify.co/session?u=me</span>',1,'Read the domain right-to-left before the first single slash: the real owner here is micros0ft-verify.co — a zero for an o, and not Microsoft.')+'</p>'+
+    '<p style="color:var(--dimmer);font-size:13px">'+c('Sent from Microsoft Corporation, One Microsoft Way',0)+'</p>'; },
+  answer:'report',
+  explain:'Lookalike sender domain, a two-hour deadline, a generic greeting and a credential-harvesting link. Report it and move on — never "just check" the link.'
+},
+{
+  chan:'Email', from:'Coupa IT Service Desk', addr:'itservicedesk@coupa.com', initials:'IT',
+  subj:function(){ return c('Planned SSO maintenance — Saturday 04:00–06:00 PT',0); },
+  body:function(){ return '<p>'+c('Hi Melisha,',0)+'</p>'+
+    '<p>We are applying updates to single sign-on this Saturday. You may be asked to '+
+    c('sign in again through your normal company sign-in page',0)+' on Monday morning. '+
+    c('No action is needed now.',0)+'</p>'+
+    '<p>'+c('We will never ask you for your password or a verification code by email, chat or phone.',0)+'</p>'+
+    '<p>'+c('Raise a ticket in the IT portal if you have questions.',0)+' &mdash; IT Service Desk</p>'; },
+  answer:'legit',
+  explain:'Internal sender, no link asking for credentials, no urgency, and it points you back to the official portal rather than a link in the message. Over-reporting real notices trains people to ignore the button — accuracy matters both ways.'
+},
+{
+  chan:'SMS', from:'Unknown number', addr:'+1 (415) 555-0182', initials:'?',
+  subj:function(){ return 'Text message'; },
+  body:function(){ return '<p>'+c('Hi, this is Mark from Finance leadership.',1,'Anyone can claim a title in a text. Authority is the oldest social-engineering lever there is.')+' '+
+    c('I\'m stuck in a board session and can\'t take calls.',1,'Pre-blocking the one channel that would verify them is a deliberate move, not a coincidence.')+'</p>'+
+    '<p>'+c('I need you to buy five $500 gift cards for a client thank-you and send me the codes.',1,'Gift cards, crypto and wire requests over chat are fraud in essentially every case. The codes are untraceable once sent.')+' '+
+    c('Expense it Monday, I\'ll approve it personally.',1,'Promising to bypass the normal approval path is the tell that the normal path would have stopped this.')+'</p>'+
+    '<p>'+c('Please keep this between us for now.',1,'Secrecy requests exist to keep you away from the colleague who would say "that\'s a scam".')+'</p>'; },
+  answer:'report',
+  explain:'Textbook gift-card business email compromise, moved to SMS because chat has no security controls. Real executives do not buy gift cards through strangers\' phones, and they never ask you to keep spending secret.'
+},
+{
+  chan:'Teams', from:'IT Helpdesk (External)', addr:'helpdesk@coupa-itsupport.net', initials:'IT',
+  subj:function(){ return 'Chat request'; },
+  body:function(){ return '<p><span class="chip" style="margin-bottom:8px">'+c('EXTERNAL',1,'The External tag means this account is not on your tenant. Your own helpdesk is never external.')+'</span></p>'+
+    '<p>Hello! We detected '+c('an unusual sign-in from Lagos, Nigeria',1,'Scary-sounding foreign geography with no case number is theatre. Real alerts reference a ticket you can look up.')+' on your account. '+
+    c('Click here to re-enrol your MFA within 15 minutes',1,'Unsolicited MFA re-enrolment is the single highest-value thing an attacker can get you to do — it hands them your second factor.')+' or your account will be suspended.</p>'+
+    '<p>'+c('Reply with your current 6-digit code to confirm it is you.',1,'No legitimate person, tool or helpdesk will ever ask you to read out a verification code. This is the whole attack.')+'</p>'; },
+  answer:'report',
+  explain:'External account impersonating internal IT, inside a chat tool people trust more than email. The MFA code request is the giveaway — that code is the only thing standing between an attacker and your account.'
+},
+{
+  chan:'Email', from:'Dana Whitfield · Northbridge Logistics', addr:'d.whitfield@northbridge-logistics.com', initials:'DW',
+  subj:function(){ return 'Updated remittance details ahead of Friday\'s payment run'; },
+  body:function(){ return '<p style="color:var(--dim);font-size:13px">Reply-To: '+c('accounts.northbridge@secure-billing-portal.com',1,'The Reply-To does not match the sender domain. Your answer goes to the attacker even though the message looks like it came from Dana.')+'</p>'+
+    '<p>Hi &mdash; good speaking last week. '+c('Our bank has flagged the old account for closure, so please update our remittance details before Friday.',1,'A supplier bank-detail change arriving by email, timed to a payment run, is the most expensive scam in accounts payable.')+'</p>'+
+    '<p>New details attached. '+c('Please confirm the change is applied before the cut-off so we avoid a late-payment hold.',1,'Deadline pressure aimed squarely at the control that would catch this: independent verification.')+'</p>'+
+    '<p>'+c('<span class="attach">📎 Northbridge_Remittance_Update.pdf</span>',0)+'</p>'+
+    '<p style="color:var(--dimmer);font-size:13px">'+c('No purchase order or invoice number referenced.',1,'A genuine supplier ties every payment message to a PO or invoice number. Its absence is a red flag on its own.')+'</p>'; },
+  answer:'verify',
+  explain:'This one may well involve a real supplier and a real relationship — that is what makes it dangerous. You do not report Dana; you stop, and you phone the number you already had on file (never one from this email) before anything touches the vendor master.'
+},
+{
+  chan:'Phone call', from:'"Coupa Service Desk"', addr:'Caller ID: Coupa Service Desk', initials:'☎',
+  subj:function(){ return 'Live call — transcript'; },
+  body:function(){ return '<p><em>"Hi, I\'m calling from the service desk. '+
+    c('We\'re seeing a fraudulent login attempt on your account right now',1,'Live-emergency framing is designed to spike your heart rate so you skip the verification step.')+'. '+
+    c('I can block it, but the system just pushed you a six-digit code — read it to me and I\'ll shut the session down.',1,'This is a real-time MFA relay. The attacker already has your password; the code is the last lock, and they are asking you to open it.')+'"</em></p>'+
+    '<p><em>"'+c('Caller ID shows our internal name so you know it\'s us.',1,'Caller ID is trivially spoofed. It is evidence of nothing.')+' '+
+    c('I really can\'t put you on hold, we\'re losing the window.',1,'Refusing to let you hang up and call back on a known number is the point of no return. Hang up anyway.')+'"</em></p>'; },
+  answer:'report',
+  explain:'Voice phishing with real-time MFA relay. Hang up, do not call back on any number they give you, change your password, and report it — if they are calling you, they already have half of your credentials.'
+},
+{
+  chan:'Email', from:'DocuSign', addr:'dse@docusign.net', initials:'DS',
+  subj:function(){ return c('Northbridge MSA renewal — Dana Whitfield has sent you a document to sign',0); },
+  body:function(){ return '<p>'+c('You have a document waiting: Northbridge MSA Renewal 2026 (ref MSA-4471), the agreement you reviewed with Legal on Tuesday.',0)+'</p>'+
+    '<p>'+c('Review Document',0)+' &mdash; '+c('docusign.net',0)+'</p>'+
+    '<p style="color:var(--dimmer);font-size:13px">'+c('Alternate signing method: visit docusign.com and enter the security code shown in your notification.',0)+'</p>'; },
+  answer:'legit',
+  explain:'Correct DocuSign infrastructure, a document you were already expecting with a reference you can match, and an alternate route that lets you reach it without clicking anything. Expected + verifiable + no credential prompt is what "legitimate" actually looks like.'
+},
+{
+  chan:'LinkedIn', from:'Priya Raman — Talent Partner', addr:'Profile created 3 weeks ago · 11 connections', initials:'PR',
+  subj:function(){ return 'Connection message'; },
+  body:function(){ return '<p>'+c('Profile created 3 weeks ago · 11 connections',1,'A brand-new profile with almost no network, recruiting for a senior role, is a throwaway account.')+'</p>'+
+    '<p>Hi! I\'m hiring for a role that pays well above your band. '+
+    c('Before I share the spec, could you tell me which ticketing and procurement systems your team runs, and who signs off on vendor payments?',1,'These are not recruiter questions. This is reconnaissance for a later attack — tooling and approval chains are exactly what a fraudster needs.')+'</p>'+
+    '<p>'+c('<span class="attach">📎 Compensation_Benchmark_2026.xlsm</span>',1,'A macro-enabled .xlsm from a stranger is executable code, not a spreadsheet.')+' '+
+    c('Let\'s continue on my personal WhatsApp so HR doesn\'t see it.',1,'Pushing you off a monitored platform onto personal channels removes every safety net your employer has.')+'</p>'; },
+  answer:'report',
+  explain:'Social engineering dressed as a career opportunity: fresh account, questions that map your internal controls, a macro-enabled attachment, and a nudge to go somewhere nobody is watching. Flattery is a tool.'
+},
+{
+  chan:'Email', from:'Aaron Vance (Coupa)', addr:'aaron.vance@coupa.com', initials:'AV',
+  subj:function(){ return c('Aaron shared "Q3 Compensation Review — FINAL.xlsx" with you',1,'A file whose sensitivity has nothing to do with your job is bait tuned to curiosity — and curiosity is a vulnerability.'); },
+  body:function(){ return '<p>Aaron Vance shared a file with you.</p>'+
+    '<p>'+c('<span class="fakelink">Open in OneDrive →  sharepoint-docs-secure.net/auth</span>',1,'Genuine Microsoft sharing never lands on a third-party domain. This host is not Microsoft, whatever the button says.')+'</p>'+
+    '<p>'+c('You will be asked to re-enter your Microsoft password to view this file.',1,'A re-authentication prompt reached through a link in a message is a credential-harvest page. Always start from the app, never from the email.')+'</p>'+
+    '<p style="color:var(--dimmer);font-size:13px">'+c('Sent from a genuine coupa.com address.',1,'The address being real makes this worse, not safer — it means a colleague\'s account is very likely already compromised and is now attacking you.')+'</p>'; },
+  answer:'verify',
+  explain:'The sender is real and the account is almost certainly compromised, so this needs both a report and a human check: message Aaron another way. An internal address is not a safety guarantee — it is how internal phishing spreads.'
+},
+{
+  chan:'Email', from:'Coupa People Team', addr:'people-notifications@coupa-benefits-portal.co', initials:'HR',
+  subj:function(){ return c('Scan to re-enrol before open enrolment closes tonight',1,'Deadline plus benefits plus "scan this" is a combination built to get you onto your phone, away from every desktop protection you have.'); },
+  body:function(){ return '<p style="color:var(--dim);font-size:13px">Display name says Coupa People Team; actual domain is '+
+    c('coupa-benefits-portal.co',1,'A hyphenated cousin of your real domain, on a different top-level domain. Display names are free to set; domains are not.')+'</p>'+
+    '<p>'+c('Scan the code below with your phone camera to verify your identity and keep your coverage.',1,'A QR code hides its destination from you and from your company\'s link scanning. "Quishing" exists specifically to route you around security controls.')+'</p>'+
+    '<p>'+c('<span class="qr"></span>',1,'The QR code is the payload. There is no safe way to preview where it goes — do not scan it.')+'</p>'+
+    '<p>'+c('Do not reply to this message; the mailbox is unmonitored.',1,'Closing off replies removes the easiest way for you to ask a human whether this is real.')+'</p>'; },
+  answer:'report',
+  explain:'QR-code phishing on a lookalike domain, timed to a real HR deadline. Benefits enrolment always starts from the bookmark or portal you already use — never from a code in an email.'
+}
+];
+
+var ACTIONS = {
+  report: {label:'Report as Phishing', sub:'Malicious — hit the button'},
+  legit:  {label:'Legitimate',          sub:'Safe to act on as-is'},
+  verify: {label:'Verify Out-of-Band',  sub:'Plausible — confirm first'}
+};
+
+var ORDER, idx=0, raw=0, rawMax=0, lives=3, streak=0, best=0, correct=0, flagged={}, timer=null, review=[];
+
+function mult(){ return Math.min(1 + 0.1*streak, 2); }
+var LIMIT = 38;
+
+function start(){
+  ORDER = A.shuffle(ITEMS);
+  // theoretical max: perfect streak ramp, every tell flagged, instant answers
+  rawMax = ORDER.reduce(function(s,item,i){
+    TELLS = []; item.subj(); item.body();
+    var tellCount = TELLS.filter(function(t){return t.tell;}).length;
+    return s + Math.round(100*Math.min(1+0.1*i,2)) + 30*tellCount + 40;
+  },0);
+  round();
+}
+
+function round(){
+  if (idx >= ORDER.length || lives <= 0) return done();
+  var item = ORDER[idx];
+  TELLS = [];
+  var subj = item.subj(), body = item.body();
+  var tellTotal = TELLS.filter(function(t){return t.tell;}).length;
+  flagged = {};
+
+  A.el('stage').innerHTML =
+    A.hud([
+      ['Score', '<span id="hScore">'+Math.round(raw)+'</span>', 'robin'],
+      ['Message', (idx+1)+' / '+ORDER.length, ''],
+      ['Multiplier', '<span id="hMult">'+mult().toFixed(1)+'&times;</span>', 'good'],
+      ['Lives', '<span id="hLives" class="hearts">'+'◆'.repeat(lives)+'<span style="color:rgba(255,255,255,.15)">'+'◆'.repeat(3-lives)+'</span></span>', '']
+    ]) +
+    '<div class="timerbar" id="tbar"><i></i></div>' +
+    '<div class="msgcard fadein" id="card">'+
+      '<div class="msghead">'+
+        '<div class="avatar">'+esc(item.initials)+'</div>'+
+        '<div class="msgmeta"><div class="nm">'+esc(item.from)+'</div><div class="ad">'+esc(item.addr)+'</div></div>'+
+        '<span class="chan">'+esc(item.chan)+'</span>'+
+      '</div>'+
+      '<div class="msgsubj">'+subj+'</div>'+
+      '<div class="msgbody">'+body+'</div>'+
+    '</div>'+
+    '<div class="flagbar"><span>Click anything that looks wrong to flag it. '+
+      '<strong style="color:var(--robin)">+30</strong> per real clue, <strong>&minus;10</strong> for a false flag.</span>'+
+      '<span id="flagCount">0 flagged &middot; '+tellTotal+' clues hidden here</span></div>'+
+    '<div class="actions">'+
+      Object.keys(ACTIONS).map(function(k){
+        return '<button class="btn '+(k==='report'?'primary':'ghost')+'" data-act="'+k+'">'+
+          ACTIONS[k].label+'<small>'+ACTIONS[k].sub+'</small></button>';
+      }).join('')+
+    '</div>'+
+    '<div id="fb" style="margin-top:16px"></div>';
+
+  Array.prototype.forEach.call(document.querySelectorAll('#card .cell'), function(sp){
+    sp.onclick = function(){
+      var i = +sp.dataset.i;
+      if (flagged[i] !== undefined) return;
+      var t = TELLS[i];
+      flagged[i] = t.tell;
+      sp.className = 'cell ' + (t.tell ? 'flagged' : 'miss');
+      if (t.tell){ raw += 30; A.SFX.good(); A.float(sp, '+30', 'var(--pistachio)'); }
+      else { raw -= 10; A.SFX.bad(); A.float(sp, '−10', 'var(--robin)'); }
+      A.el('hScore').textContent = Math.round(raw);
+      var n = Object.keys(flagged).filter(function(k){return flagged[k];}).length;
+      A.el('flagCount').textContent = n+' of '+tellTotal+' clues found';
+    };
+  });
+
+  Array.prototype.forEach.call(document.querySelectorAll('.actions .btn'), function(b){
+    b.onclick = function(){ answer(b.dataset.act, item, tellTotal); };
+  });
+
+  timer = A.Timer(A.el('tbar'), LIMIT, function(){ answer(null, item, tellTotal); });
+}
+
+function answer(act, item, tellTotal){
+  if (timer) timer.stop();
+  var left = timer ? timer.remaining() : 0;
+  var ok = act === item.answer;
+  var speed = act ? Math.round((left/LIMIT)*40) : 0;
+  var pts = 0;
+
+  if (ok){
+    pts = Math.round(100*mult()) + speed;
+    raw += pts; streak++; correct++; best = Math.max(best, streak);
+    A.SFX.great();
+  } else {
+    lives--; streak = 0;
+    A.SFX.bad();
+    A.el('card').classList.add('shake');
+  }
+
+  var found = Object.keys(flagged).filter(function(k){return flagged[k];}).length;
+
+  // reveal every missed clue
+  document.getElementById('card').classList.add('locked');
+  Array.prototype.forEach.call(document.querySelectorAll('#card .cell'), function(sp){
+    var i = +sp.dataset.i;
+    if (TELLS[i].tell && flagged[i] === undefined) sp.className = 'cell reveal';
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.actions .btn'), function(b){
+    b.disabled = true;
+    if (b.dataset.act === item.answer) b.style.boxShadow = '0 0 0 2px var(--pistachio)';
+  });
+
+  var missed = TELLS.map(function(t,i){ return {t:t,i:i}; })
+                    .filter(function(x){ return x.t.tell && flagged[x.i] === undefined; });
+
+  A.el('fb').innerHTML =
+    '<div class="verdict '+(ok?'ok':'no')+'">'+
+      '<div class="vh">'+(ok?'✓ Correct':'✕ '+(act?'Not quite':'Out of time'))+
+        (ok?' <span class="chip good">+'+pts+'</span>':' <span class="chip">correct call: '+ACTIONS[item.answer].label+'</span>')+'</div>'+
+      '<p>'+item.explain+'</p>'+
+      '<div class="why"><strong>Clues:</strong> you flagged '+found+' of '+tellTotal+'.'+
+        (missed.length ? ' Highlighted in green above &mdash; here is what they meant:<ul style="margin:8px 0 0 18px">'+
+          missed.map(function(x){ return '<li style="margin-bottom:6px">'+x.t.why+'</li>'; }).join('')+'</ul>' : ' Nothing slipped past you.')+
+      '</div>'+
+      '<button class="btn primary" id="nextBtn" style="margin-top:16px">'+
+        (idx+1 >= ORDER.length || lives<=0 ? 'See results' : 'Next message')+' &rarr;</button>'+
+    '</div>';
+
+  review.push({ok:ok, q:item.chan+' — "'+String(item.from)+'"', a:item.explain});
+  A.el('nextBtn').onclick = function(){ idx++; A.SFX.select(); round(); };
+  A.el('nextBtn').focus();
+}
+
+function done(){
+  A.finish({
+    score: Math.round(A.clamp(raw/rawMax,0,1)*1000),
+    maxScore: 1000,
+    accuracy: Math.round((correct/ORDER.length)*100),
+    statLabel: 'Best streak', statValue: best,
+    review: review
+  });
+}
+
+A.boot({
+  week:1, topic:'Phishing & Social Engineering', title:'Inbox Zero-Day',
+  tagline:'Ten messages hit your inbox, your phone and your chat. Some are real. Some cost the company money. You have 38 seconds each &mdash; find the clues, then make the call.',
+  rounds:10, minutes:8, maxScore:1000,
+  brief:[
+    'Read each message and <strong>click anything that looks wrong</strong> to flag it. Real clues are +30. Guessing costs you 10.',
+    'Then choose one of three calls: <strong>Report as Phishing</strong>, <strong>Legitimate</strong>, or <strong>Verify Out-of-Band</strong>.',
+    '<strong>Not everything is an attack.</strong> Reporting a genuine message is a wrong answer too — precision is the skill.',
+    'Consecutive correct calls build a multiplier up to 2&times;. Answering fast adds a speed bonus.',
+    'Three wrong calls ends the run. Every round is explained either way.'
+  ],
+  onStart:start
+});
+})();
+</script>
+</body>
+</html>

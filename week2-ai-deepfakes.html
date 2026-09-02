@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Week 2 — Coupa Cyber Arcade</title>
+<link rel="stylesheet" href="arcade.css">
+<style>
+  .stagehdr{display:flex;align-items:baseline;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+  .stagehdr h3{margin:0}
+  .frame{position:relative;background:#04122F;border:1px solid var(--line);border-radius:var(--radius);
+    overflow:hidden;aspect-ratio:16/10}
+  .frame svg{display:block;width:100%;height:100%}
+  .scanline{position:absolute;left:0;right:0;height:78px;pointer-events:none;
+    background:linear-gradient(180deg,transparent,rgba(95,214,255,.13),transparent);
+    animation:scan 3.4s linear infinite}
+  @keyframes scan{from{top:-80px}to{top:100%}}
+  .hot{fill:transparent;stroke:transparent;stroke-width:2;cursor:crosshair}
+  .frame:not(.locked) .hot:hover{stroke:rgba(95,214,255,.75);fill:rgba(95,214,255,.1)}
+  .hot.hit{stroke:var(--pistachio);fill:rgba(150,234,170,.18);cursor:default}
+  .hot.miss{stroke:rgba(255,255,255,.3);fill:rgba(255,255,255,.07);cursor:default}
+  .hot.reveal{stroke:var(--robin);stroke-dasharray:5 4;fill:rgba(95,214,255,.12);cursor:default}
+  .findlist{display:grid;gap:8px;margin-top:14px}
+  .findlist .f{display:flex;gap:10px;font-size:14px;line-height:21px;padding:10px 13px;
+    background:rgba(255,255,255,.05);border-radius:9px;border-left:3px solid var(--pistachio)}
+  .findlist .f.pending{border-left-color:rgba(255,255,255,.14);color:var(--dimmer)}
+  .opts{display:grid;gap:10px;margin-top:16px}
+  .opt{text-align:left;background:var(--panel-2);border:1px solid var(--line);color:var(--white);
+    border-radius:11px;padding:15px 18px;cursor:pointer;font-family:var(--font);font-size:15px;
+    line-height:23px;transition:.14s;display:flex;gap:13px;align-items:flex-start}
+  .opt:hover:not(:disabled){border-color:var(--robin);background:rgba(95,214,255,.09);transform:translateX(3px)}
+  .opt:disabled{cursor:default;opacity:.62}
+  .opt .kb{flex:none;width:24px;height:24px;border-radius:7px;background:rgba(95,214,255,.16);
+    color:var(--robin);display:grid;place-items:center;font-size:12px;font-weight:600}
+  .opt.right{border-color:var(--pistachio);background:rgba(150,234,170,.13);opacity:1}
+  .opt.wrong{border-color:var(--robin);background:rgba(95,214,255,.09)}
+  .transcript{background:var(--panel-2);border:1px solid var(--line);border-left:3px solid var(--lilac);
+    border-radius:11px;padding:19px 22px;font-size:15px;line-height:26px}
+  .transcript .who{font-size:11px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+    color:var(--lilac);margin-bottom:8px}
+  .transcript p{margin-bottom:11px}
+  .transcript p:last-child{margin-bottom:0}
+  .promptbox{background:#04122F;border:1px solid var(--line-strong);border-radius:11px;padding:19px 22px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:14px;line-height:24px;
+    white-space:pre-wrap;word-break:break-word}
+  .promptbox .tag{display:block;font-family:var(--font);font-size:11px;font-weight:600;letter-spacing:.13em;
+    text-transform:uppercase;color:var(--dimmer);margin-bottom:10px}
+  .triage{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+  .triage .btn{padding:18px 10px;flex-direction:column;gap:3px;font-size:15px;line-height:19px;text-align:center}
+  .triage .btn small{font-size:11px;font-weight:400;opacity:.72}
+  @media(max-width:640px){.triage{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="topbar"></div>
+  <div id="start"></div>
+  <div id="stage" class="hidden"></div>
+  <div id="results" class="hidden"></div>
+  <footer id="foot"></footer>
+</div>
+
+<script src="config.js"></script>
+<script src="arcade.js"></script>
+<script>
+(function(){
+'use strict';
+var A = window.Arcade, esc = A.esc;
+
+/* ================= STAGE 1 — FRAME FORENSICS ================= */
+/* Two stylised "video call frames". Each has planted synthesis artifacts
+   as clickable regions, plus decoy regions that cost points.            */
+
+function frameA(){ return '' +
+'<svg viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg">' +
+  '<defs><filter id="bl2"><feGaussianBlur stdDeviation="2.6"/></filter>' +
+  '<filter id="bl5"><feGaussianBlur stdDeviation="5"/></filter></defs>' +
+  '<rect width="640" height="400" fill="#0A1E45"/>' +
+  /* background office wall + warped sign */
+  '<rect x="30" y="40" width="170" height="58" rx="6" fill="#102E68"/>' +
+  '<text x="46" y="77" font-family="Poppins,sans-serif" font-size="22" font-weight="600" fill="#5FD6FF">CONFERENCE</text>' +
+  '<rect x="470" y="36" width="140" height="96" rx="8" fill="#102E68"/>' +
+  '<rect x="486" y="52" width="108" height="8" rx="4" fill="#1565C0" opacity=".5"/>' +
+  '<rect x="486" y="70" width="76" height="8" rx="4" fill="#1565C0" opacity=".35"/>' +
+  /* two conflicting shadows on the wall */
+  '<ellipse cx="228" cy="356" rx="96" ry="15" fill="#04122F" opacity=".75"/>' +
+  '<ellipse cx="452" cy="352" rx="70" ry="12" fill="#04122F" opacity=".6"/>' +
+  /* torso */
+  '<path d="M196 400 q0-96 124-96 q124 0 124 96 z" fill="#1565C0"/>' +
+  '<path d="M300 306 l20 0 l-4 46 l-12 0 z" fill="#0C2559"/>' +
+  /* collar mismatch: left lapel offset from right */
+  '<path d="M282 308 l18 22 l-30 12 z" fill="#0C2559"/>' +
+  '<path d="M356 306 l-16 30 l30 6 z" fill="#0C2559" opacity=".55"/>' +
+  /* neck + head */
+  '<rect x="300" y="238" width="40" height="42" fill="#B5A4FC" opacity=".55"/>' +
+  '<ellipse cx="320" cy="176" rx="74" ry="86" fill="#B5A4FC" opacity=".72"/>' +
+  /* hair with jagged blend edge */
+  '<path d="M246 156 q6-84 74-84 q68 0 74 84 l-8 2 q-6-14-14 2 q-8-16-16 0 q-9-15-17 1 q-8-14-16 1 q-9-16-17 0 q-8-15-16 1 q-8-13-16 2 z" fill="#081D4D"/>' +
+  /* eyes — mismatched catchlights */
+  '<ellipse cx="294" cy="170" rx="14" ry="9" fill="#FFFFFF"/>' +
+  '<circle cx="294" cy="170" r="5.5" fill="#1C1F2A"/>' +
+  '<circle cx="290.5" cy="167" r="2.2" fill="#FFFFFF"/>' +
+  '<ellipse cx="346" cy="170" rx="14" ry="9" fill="#FFFFFF"/>' +
+  '<circle cx="346" cy="170" r="5.5" fill="#1C1F2A"/>' +
+  '<circle cx="350" cy="173.5" r="2.2" fill="#FFFFFF"/>' +
+  /* mouth / teeth smear */
+  '<g filter="url(#bl5)"><rect x="300" y="208" width="42" height="13" rx="6" fill="#FFFFFF" opacity=".82"/></g>' +
+  '<path d="M298 204 q22 16 46 0" stroke="#081D4D" stroke-width="3" fill="none"/>' +
+  /* earrings — different shapes */
+  '<circle cx="249" cy="190" r="7" fill="#5FD6FF"/>' +
+  '<rect x="384" y="184" width="12" height="12" fill="#5FD6FF"/>' +
+  /* hand with six fingers */
+  '<g fill="#B5A4FC" opacity=".72">' +
+    '<rect x="440" y="300" width="58" height="42" rx="14"/>' +
+    '<rect x="444" y="272" width="10" height="34" rx="5"/>' +
+    '<rect x="457" y="264" width="10" height="42" rx="5"/>' +
+    '<rect x="470" y="262" width="10" height="44" rx="5"/>' +
+    '<rect x="483" y="268" width="10" height="38" rx="5"/>' +
+    '<rect x="496" y="278" width="10" height="28" rx="5"/>' +
+    '<rect x="430" y="290" width="10" height="26" rx="5" transform="rotate(-28 435 303)"/>' +
+  '</g>' +
+  /* HUD chrome */
+  '<rect x="16" y="356" width="128" height="28" rx="8" fill="#04122F" opacity=".85"/>' +
+  '<circle cx="34" cy="370" r="5" fill="#5FD6FF"/>' +
+  '<text x="48" y="375" font-family="Poppins,sans-serif" font-size="13" fill="#FFFFFF">M. Whitfield</text>' +
+  /* hotspots */
+  '<rect class="hot" data-i="0" x="244" y="62" width="154" height="100"/>' +
+  '<rect class="hot" data-i="1" x="424" y="252" width="96" height="98"/>' +
+  '<rect class="hot" data-i="2" x="286" y="194" width="72" height="40"/>' +
+  '<rect class="hot" data-i="3" x="24" y="34" width="182" height="70"/>' +
+  '<rect class="hot" data-i="4" x="466" y="32" width="148" height="104"/>' +
+  '<rect class="hot" data-i="5" x="14" y="352" width="134" height="36"/>' +
+  '<rect class="hot" data-i="6" x="376" y="172" width="34" height="34"/>' +
+'</svg>'; }
+
+var FRAME_A_SPOTS = [
+  {hit:1, label:'Hair-to-background blend', why:'The hairline dissolves into the wall in a jagged, flickering edge. Fine strands are the hardest thing for a generator to keep stable frame to frame.'},
+  {hit:1, label:'Six-fingered hand', why:'Hands are still the most reliable giveaway. Count fingers — generators lose track of them, especially in motion.'},
+  {hit:1, label:'Smeared teeth and mouth', why:'The mouth interior is a blurred smear with no individual teeth. Speech is where lip-sync models break down first.'},
+  {hit:0, label:'Background signage'},
+  {hit:0, label:'Wall monitor'},
+  {hit:0, label:'Name plate'},
+  {hit:1, label:'Mismatched earrings', why:'One earring is round, the other square. Left/right asymmetry in paired accessories is a classic synthesis error.'}
+];
+
+function frameB(){ return '' +
+'<svg viewBox="0 0 640 400" xmlns="http://www.w3.org/2000/svg">' +
+  '<defs><filter id="s5"><feGaussianBlur stdDeviation="4.5"/></filter></defs>' +
+  '<rect width="640" height="400" fill="#081D4D"/>' +
+  /* window with light from the left */
+  '<rect x="26" y="30" width="120" height="150" rx="6" fill="#5FD6FF" opacity=".2"/>' +
+  '<line x1="86" y1="30" x2="86" y2="180" stroke="#0A1E45" stroke-width="4"/>' +
+  /* soft daylight falling in from the window side */
+  '<rect x="146" y="30" width="150" height="300" fill="#5FD6FF" opacity=".05"/>' +
+  /* desk */
+  '<rect x="0" y="330" width="640" height="70" fill="#0C2559"/>' +
+  /* shadow falls the WRONG way relative to the window */
+  '<ellipse cx="196" cy="336" rx="90" ry="13" fill="#04122F" opacity=".8"/>' +
+  /* torso + head */
+  '<path d="M212 400 q0-104 108-104 q108 0 108 104 z" fill="#1565C0"/>' +
+  '<rect x="304" y="230" width="34" height="42" fill="#B5A4FC" opacity=".55"/>' +
+  '<ellipse cx="320" cy="168" rx="70" ry="82" fill="#B5A4FC" opacity=".72"/>' +
+  /* glasses — one arm missing, frames different sizes */
+  '<circle cx="296" cy="164" r="24" fill="none" stroke="#081D4D" stroke-width="4"/>' +
+  '<circle cx="350" cy="164" r="18" fill="none" stroke="#081D4D" stroke-width="4"/>' +
+  '<line x1="320" y1="164" x2="326" y2="164" stroke="#081D4D" stroke-width="4"/>' +
+  '<line x1="272" y1="160" x2="252" y2="150" stroke="#081D4D" stroke-width="4"/>' +
+  /* eyes */
+  '<circle cx="296" cy="164" r="5" fill="#1C1F2A"/><circle cx="350" cy="164" r="5" fill="#1C1F2A"/>' +
+  /* ear that melts into the jaw */
+  '<g filter="url(#s5)"><ellipse cx="256" cy="180" rx="14" ry="20" fill="#B5A4FC" opacity=".8"/></g>' +
+  /* hair */
+  '<path d="M250 148 q4-80 70-80 q66 0 70 80 l-140 0 z" fill="#081D4D"/>' +
+  /* mouth */
+  '<path d="M302 200 q18 12 38 0" stroke="#081D4D" stroke-width="3" fill="none"/>' +
+  /* lanyard badge with garbled text */
+  '<rect x="336" y="292" width="62" height="42" rx="6" fill="#FFFFFF" opacity=".9"/>' +
+  '<text x="342" y="312" font-family="Poppins,sans-serif" font-size="11" font-weight="600" fill="#081D4D">CQUPA</text>' +
+  '<text x="342" y="326" font-family="Poppins,sans-serif" font-size="9" fill="#1565C0">FlNANCE</text>' +
+  /* coffee cup (decoy) */
+  '<rect x="486" y="296" width="42" height="38" rx="5" fill="#102E68"/>' +
+  '<path d="M528 306 q16 0 16 10 q0 10-16 10" fill="none" stroke="#102E68" stroke-width="5"/>' +
+  /* hotspots */
+  '<rect class="hot" data-i="0" x="238" y="152" width="42" height="56"/>' +
+  '<rect class="hot" data-i="1" x="266" y="136" width="108" height="56"/>' +
+  '<rect class="hot" data-i="2" x="330" y="286" width="76" height="54"/>' +
+  '<rect class="hot" data-i="3" x="104" y="308" width="188" height="46"/>' +
+  '<rect class="hot" data-i="4" x="20" y="26" width="132" height="160"/>' +
+  '<rect class="hot" data-i="5" x="480" y="290" width="70" height="48"/>' +
+'</svg>'; }
+
+var FRAME_B_SPOTS = [
+  {hit:1, label:'Ear melting into the jaw', why:'The ear has no defined edge — it dissolves into the face. Ears and the jawline are low-attention regions where models cut corners.'},
+  {hit:1, label:'Asymmetric glasses, one arm missing', why:'The two lenses are different sizes and only one temple arm reaches an ear. Rigid geometry like eyewear is unforgiving of synthesis error.'},
+  {hit:1, label:'Garbled badge text', why:'"CQUPA / FlNANCE" — text is where generators fail most visibly. Any readable writing in frame is worth zooming in on.'},
+  {hit:1, label:'Shadow contradicts the light', why:'The window is on the left, so the shadow should fall right. It falls left instead. Lighting physics is a global constraint models routinely break.'},
+  {hit:0, label:'Window'},
+  {hit:0, label:'Coffee cup'}
+];
+
+var FRAMES = [
+  {name:'Frame 01 — "M. Whitfield", vendor onboarding call', svg:frameA, spots:FRAME_A_SPOTS, limit:45},
+  {name:'Frame 02 — "Finance lead", payment approval call', svg:frameB, spots:FRAME_B_SPOTS, limit:45}
+];
+
+/* ================= STAGE 2 — LIVE CALL JUDGEMENT ================= */
+var CALLS = [
+{
+  who:'Video call · "CFO" · joined 14 seconds ago',
+  lines:[
+    '"Hi — sorry, my camera is glitching, the hotel wifi is terrible. Can you hear me?"',
+    '"I need a wire released today for the Northbridge acquisition. It\'s confidential, legal has it under embargo, so don\'t loop in your manager."',
+    '"I\'ve got two minutes before my next call. Can you push it through and confirm by text?"'
+  ],
+  opts:[
+    {t:'Release the wire — the face and voice both match, and you recognise the acquisition name.', ok:0,
+     why:'Face and voice are exactly what is cheapest to fake now. Recognition is no longer authentication.'},
+    {t:'End the call, then reach the CFO through a number and channel you already had, and follow the payment playbook regardless of what they say.', ok:1,
+     why:'Right. Hang up and call back on a known-good number. A real CFO will be pleased you did; an attacker cannot follow you to a channel they do not control.'},
+    {t:'Ask them to turn their camera on properly and judge by whether the video looks real.', ok:0,
+     why:'You would be grading a deepfake on picture quality — and "bad wifi" is the standard excuse for hiding artifacts. Verify the channel, not the pixels.'},
+    {t:'Ask a security question only the real CFO would know, live on the call.', ok:0,
+     why:'Better instinct, but an attacker who researched them may know it, and anything you ask live can be relayed to a human accomplice in seconds.'}
+  ],
+  lesson:'Deepfake video plus urgency plus secrecy plus an instruction not to escalate. The defence is procedural, not perceptual: verify on a separate channel you initiate.'
+},
+{
+  who:'Voice note · "IT contractor" · arrived on WhatsApp',
+  lines:[
+    '"Hey, it\'s Ravi from the infra vendor. We\'re mid-migration and I\'m locked out of the jump host."',
+    '"Your name was on the access list. Could you just screen-share and paste me the session token? Saves raising a ticket at 11pm."'
+  ],
+  opts:[
+    {t:'Share it — the migration is real and you have seen Ravi in the project channel.', ok:0,
+     why:'A real project makes the pretext credible, which is exactly why attackers pick real projects. Credentials and tokens never travel over chat.'},
+    {t:'Decline, tell them to go through the ticket and on-call process, and report the request to security.', ok:1,
+     why:'Right. The out-of-hours, out-of-process, credential-shaped ask is the signal. Reporting it matters as much as refusing it — it may be hitting ten other people.'},
+    {t:'Ask them to send a voice note confirming their identity.', ok:0,
+     why:'They already sent a voice note. Cloning a usable voice takes seconds of public audio — more voice proves nothing.'},
+    {t:'Paste the token but rotate it in the morning.', ok:0,
+     why:'An attacker needs minutes, not hours. Rotation after the fact is a post-mortem, not a control.'}
+  ],
+  lesson:'Voice cloning has made "it sounded like them" worthless as evidence. Process is the control: identity through the ticket system, never a credential over chat.'
+},
+{
+  who:'Teams call · your actual manager, in your normal 1:1 slot',
+  lines:[
+    '"Quick one before we start — did you get the recruiting deck I sent this morning?"',
+    '"Also, no rush at all, but Legal wants the vendor list by Thursday. Ping me if that timeline is a problem."'
+  ],
+  opts:[
+    {t:'Treat it as an attack — video calls can no longer be trusted at all.', ok:0,
+     why:'Over-suspicion has a real cost: it makes normal work impossible and burns out the vigilance you need for the genuine cases.'},
+    {t:'Carry on normally. Expected call, expected slot, no urgency, no secrecy, no credential or payment ask.', ok:1,
+     why:'Right. Threat models need a "normal" or they collapse. This has none of the coercion markers — a scheduled call about ordinary work with a flexible deadline.'},
+    {t:'Demand a code word before discussing the vendor list.', ok:0,
+     why:'Code words are genuinely useful — but reserved for high-risk requests like payments and access. Applied to everything, they get abandoned within a week.'},
+    {t:'Hang up and email instead.', ok:0,
+     why:'No trigger here justifies it, and email is not inherently more trustworthy than a scheduled call.'}
+  ],
+  lesson:'The skill is discrimination, not blanket paranoia. What makes a deepfake work is urgency, secrecy, isolation from your process, and a money-or-access ask. None of those are present here.'
+},
+{
+  who:'Inbound call · "your own voice" played back to you',
+  lines:[
+    '"Before we continue, I should mention we have a recording of you approving this transfer last week."',
+    '<em>[audio plays: your voice saying "yes, approve it"]</em>',
+    '"So let\'s not make this complicated. Confirm the second payment and this stays between us."'
+  ],
+  opts:[
+    {t:'Comply — they have a recording, so contesting it will look worse.', ok:0,
+     why:'This is the coercion the attack is engineered to produce. Fabricated evidence plus shame equals silence, and silence is what lets it continue.'},
+    {t:'End the call and report it immediately, including the recording claim, and keep everything you have.', ok:1,
+     why:'Right. Synthetic audio of you is fabricated evidence, and a security team can deal with it far more easily than with a second fraudulent payment. Reporting fast is the whole defence.'},
+    {t:'Ask them to email the recording so you can review it.', ok:0,
+     why:'Engaging on their terms buys them time and confirms your attention. There is nothing to review — the artifact is manufactured.'},
+    {t:'Say nothing to anyone and quietly check the first payment yourself.', ok:0,
+     why:'Investigating alone is what the attacker is counting on. Isolation is the goal of the shame.'}
+  ],
+  lesson:'Synthetic media is now used to blackmail as well as impersonate. Fabricated proof of something you did not do is a reason to report faster, not to go quiet.'
+},
+{
+  who:'Public AI chatbot · you are drafting a supplier response',
+  lines:[
+    '"Summarise this contract and tell me the weakest clause for us."',
+    '<em>[you are about to paste the full signed Northbridge MSA, including pricing and the named signatories]</em>'
+  ],
+  opts:[
+    {t:'Paste it — you are only asking for a summary, not publishing anything.', ok:0,
+     why:'Pasting is publishing, to a third party. Consumer AI tools may retain and train on input, and the data has left your controls the moment you hit enter.'},
+    {t:'Use an approved enterprise AI tool, and even there paste only the clause you need with names, pricing and identifiers removed.', ok:1,
+     why:'Right. Approved tooling plus data minimisation. Enterprise agreements normally exclude training on your input — and you still only send the minimum the task needs.'},
+    {t:'Paste it into the public tool but delete the chat afterwards.', ok:0,
+     why:'Deleting your view of the conversation does not retract the copy already transmitted, logged or trained on.'},
+    {t:'Retype the contract in your own words first, then paste that.', ok:0,
+     why:'Paraphrasing does not remove confidential pricing or named parties. The sensitivity is in the substance, not the wording.'}
+  ],
+  lesson:'The most common AI incident is not a deepfake — it is a well-meaning person pasting confidential material into a tool with no agreement behind it. Approved tools, minimum data.'
+}
+];
+
+/* ================= STAGE 3 — PROMPT FIREWALL ================= */
+var PROMPTS = [
+{ text:'Rewrite this paragraph from our published press release to be punchier for LinkedIn.',
+  a:'safe', why:'Already public, no personal or confidential data. This is exactly what these tools are good for.' },
+{ text:'Here is the customer list with contact names, emails and contract values — cluster them by renewal risk.',
+  a:'never', why:'Customer PII plus commercial terms. This does not belong in a general AI tool at all — use approved analytics on approved systems.' },
+{ text:'Explain what a SOC 2 Type II report covers so I can brief my team.',
+  a:'safe', why:'General knowledge question with nothing of ours in it.' },
+{ text:'Debug this script — it connects to prod with the credentials on line 4.',
+  a:'redact', why:'The logic is fine to share; the credentials are not. Strip the secret, share the structure. And rotate anything already pasted.' },
+{ text:'Draft an announcement about the acquisition we close on Friday. Company name is Northbridge, price is $240M, not yet public.',
+  a:'never', why:'Material non-public information. Beyond a security problem, this is a regulatory and insider-trading one.' },
+{ text:'Summarise these interview notes so I can write the scorecard — the candidate\'s name and current employer are in the header.',
+  a:'redact', why:'Useful task, but strip the identifying header first. Candidate data is personal data and you are its custodian.' },
+{ text:'Turn this internal architecture diagram description into a slide outline for the all-hands.',
+  a:'redact', why:'Internal-only detail. Fine in an approved enterprise tool with hostnames, IPs and vendor specifics removed; not in a public one as-is.' },
+{ text:'What are common indicators that an email is a phishing attempt?',
+  a:'safe', why:'Generic security education. Nothing of yours leaves the building.' },
+{ text:'Here is the raw spreadsheet of employee salaries by name — find outliers by level.',
+  a:'never', why:'Named compensation data is among the most sensitive data any company holds. Approved HR systems only.' },
+{ text:'Improve the wording of this supplier email. It references invoice INV-4471 and our standard payment terms.',
+  a:'redact', why:'Low sensitivity, but drop the invoice number and any account identifiers — habit is what protects you when the stakes are higher.' }
+];
+var TRIAGE = {
+  safe:  {label:'Safe to Send', sub:'Nothing confidential'},
+  redact:{label:'Redact First', sub:'Useful, but strip data'},
+  never: {label:'Never Send',   sub:'Approved systems only'}
+};
+
+/* ================= ENGINE ================= */
+var raw=0, rawMax=0, correct=0, total=0, best=0, streak=0, review=[], timer=null;
+var stage=1, fi=0, ci=0, pi=0, PROMPT_SET;
+
+function bump(n){ raw += n; var e=A.el('hScore'); if(e) e.textContent = Math.round(raw); }
+
+function start(){
+  rawMax = FRAMES.reduce(function(s,f){ return s + f.spots.filter(function(x){return x.hit;}).length*60 + 40; },0)
+         + CALLS.length*120
+         + 10*70;
+  PROMPT_SET = A.shuffle(PROMPTS).slice(0,8);
+  rawMax = FRAMES.reduce(function(s,f){ return s + f.spots.filter(function(x){return x.hit;}).length*60 + 40; },0)
+         + CALLS.length*120
+         + PROMPT_SET.length*70;
+  frameRound();
+}
+
+function hudRow(label, val){
+  return A.hud([
+    ['Score','<span id="hScore">'+Math.round(raw)+'</span>','robin'],
+    ['Stage', stage+' / 3',''],
+    [label, val,''],
+    ['Streak','<span id="hStreak" class="'+(streak>1?'good':'')+'">'+streak+'</span>','']
+  ]);
+}
+
+/* ---- Stage 1 ---- */
+function frameRound(){
+  if (fi >= FRAMES.length){ stage=2; return callRound(); }
+  var F = FRAMES[fi];
+  var need = F.spots.filter(function(s){return s.hit;}).length;
+  var found = 0, used = {}, myFi = fi;
+
+  A.el('stage').innerHTML =
+    hudRow('Frame', (fi+1)+' / '+FRAMES.length) +
+    '<div class="timerbar" id="tbar"><i></i></div>' +
+    '<div class="stagehdr"><span class="eyebrow">Stage 1 · Frame Forensics</span></div>' +
+    '<h3 style="margin-bottom:6px">'+esc(F.name)+'</h3>' +
+    '<p class="lead" style="font-size:16px;line-height:24px;margin-bottom:16px">This frame was pulled from a call that requested a payment. '+
+      'Find the <strong style="color:var(--robin)">'+need+' synthesis artifacts</strong>. Clicking clean areas costs you 20.</p>' +
+    '<div class="frame" id="frm">'+F.svg()+'<div class="scanline"></div></div>' +
+    '<div class="flagbar" style="display:flex;justify-content:space-between;font-size:13px;color:var(--dimmer);margin-top:12px">' +
+      '<span><strong style="color:var(--robin)">+60</strong> per artifact &middot; <strong>&minus;20</strong> per false positive</span>' +
+      '<span id="fCount">0 / '+need+' found</span></div>' +
+    '<div class="findlist" id="flist"></div>' +
+    '<div class="row" style="margin-top:16px"><button class="btn ghost" id="doneBtn">I\'m done with this frame &rarr;</button></div>' +
+    '<div id="fb" style="margin-top:16px"></div>';
+
+  Array.prototype.forEach.call(document.querySelectorAll('#frm .hot'), function(hs){
+    hs.onclick = function(){
+      var i = +hs.dataset.i; if (used[i]) return; used[i] = 1;
+      var sp = F.spots[i];
+      if (sp.hit){
+        found++; bump(60); A.SFX.good(); hs.setAttribute('class','hot hit');
+        A.float(hs,'+60','var(--pistachio)');
+        A.el('flist').insertAdjacentHTML('beforeend',
+          '<div class="f fadein"><strong style="color:var(--pistachio)">'+esc(sp.label)+'</strong><span>'+esc(sp.why)+'</span></div>');
+        A.el('fCount').textContent = found+' / '+need+' found';
+        if (found === need) setTimeout(function(){ if (fi === myFi) endFrame(F,found,need,true); }, 550);
+      } else {
+        bump(-20); A.SFX.bad(); hs.setAttribute('class','hot miss'); A.float(hs,'−20','var(--robin)');
+      }
+    };
+  });
+
+  A.el('doneBtn').onclick = function(){ endFrame(F, found, need, false); };
+  timer = A.Timer(A.el('tbar'), F.limit, function(){ if (fi === myFi) endFrame(F, found, need, false); });
+}
+
+function endFrame(F, found, need, perfect){
+  if (timer) timer.stop();
+  var el = A.el('frm'); if (!el || el.classList.contains('locked')) return;
+  el.classList.add('locked');
+  var left = timer ? timer.remaining() : 0;
+  var bonus = perfect ? Math.round((left/F.limit)*40) : 0;
+  if (bonus) bump(bonus);
+  total++; if (found === need){ correct++; streak++; best = Math.max(best,streak); } else streak = 0;
+
+  Array.prototype.forEach.call(document.querySelectorAll('#frm .hot'), function(hs){
+    var sp = F.spots[+hs.dataset.i];
+    if (sp.hit && hs.getAttribute('class').indexOf('hit') < 0) hs.setAttribute('class','hot reveal');
+  });
+  A.el('doneBtn').classList.add('hidden');
+
+  var missed = F.spots.filter(function(s,i){
+    var n = document.querySelector('#frm .hot[data-i="'+i+'"]');
+    return s.hit && n && n.getAttribute('class').indexOf('hit') < 0;
+  });
+  (found===need ? A.SFX.great : A.SFX.bad)();
+
+  A.el('fb').innerHTML =
+    '<div class="verdict '+(found===need?'ok':'no')+'">' +
+      '<div class="vh">'+(found===need?'✓ All artifacts found':'Frame closed — '+found+' of '+need)+
+        (bonus?' <span class="chip good">+'+bonus+' speed</span>':'')+'</div>' +
+      (missed.length ? '<p>Outlined in blue above:</p><ul style="margin:8px 0 0 18px;font-size:14px;line-height:23px;color:rgba(255,255,255,.86)">'+
+        missed.map(function(m){ return '<li style="margin-bottom:7px"><strong>'+esc(m.label)+'</strong> — '+esc(m.why)+'</li>'; }).join('')+'</ul>'
+        : '<p>Clean sweep. Hands, ears, teeth, text and lighting are the five places to look first.</p>') +
+      '<div class="why">Worth remembering: detection by eye is a bonus, not a control. Frames get better every month — the verification habit is what lasts.</div>' +
+      '<button class="btn primary" id="nextBtn" style="margin-top:16px">Continue &rarr;</button>' +
+    '</div>';
+  review.push({ok:found===need, q:'Frame forensics: '+F.name, a:'Found '+found+' of '+need+' artifacts. Look first at hands, ears, teeth, any readable text, and whether shadows agree with the light source.'});
+  A.el('nextBtn').onclick = function(){ fi++; A.SFX.select(); frameRound(); window.scrollTo({top:0,behavior:'smooth'}); };
+}
+
+/* ---- Stage 2 ---- */
+function callRound(){
+  if (ci >= CALLS.length){ stage=3; return promptRound(); }
+  var Q = CALLS[ci];
+  var opts = A.shuffle(Q.opts);
+  var LIMIT = 40;
+
+  A.el('stage').innerHTML =
+    hudRow('Call', (ci+1)+' / '+CALLS.length) +
+    '<div class="timerbar" id="tbar"><i></i></div>' +
+    '<div class="stagehdr"><span class="eyebrow">Stage 2 · Live Call Judgement</span></div>' +
+    '<h3 style="margin-bottom:14px">What do you do?</h3>' +
+    '<div class="transcript"><div class="who">'+esc(Q.who)+'</div>'+
+      Q.lines.map(function(l){ return '<p>'+l+'</p>'; }).join('')+'</div>' +
+    '<div class="opts" id="opts">'+opts.map(function(o,i){
+      return '<button class="opt" data-i="'+i+'"><span class="kb">'+String.fromCharCode(65+i)+'</span><span>'+o.t+'</span></button>';
+    }).join('')+'</div>' +
+    '<div id="fb" style="margin-top:16px"></div>';
+
+  function pick(i){
+    if (timer) timer.stop();
+    var chosen = i === null ? null : opts[i];
+    var ok = chosen && chosen.ok;
+    total++;
+    if (ok){ var pts = 120; bump(pts); correct++; streak++; best=Math.max(best,streak); A.SFX.great(); }
+    else { streak = 0; A.SFX.bad(); }
+    Array.prototype.forEach.call(document.querySelectorAll('#opts .opt'), function(b){
+      b.disabled = true;
+      var o = opts[+b.dataset.i];
+      if (o.ok) b.classList.add('right');
+      else if (chosen === o) b.classList.add('wrong');
+    });
+    var rightOpt = opts.filter(function(o){return o.ok;})[0];
+    A.el('fb').innerHTML =
+      '<div class="verdict '+(ok?'ok':'no')+'"><div class="vh">'+
+        (ok?'✓ Correct <span class="chip good">+120</span>':(chosen?'✕ Not the safest move':'✕ Out of time'))+'</div>'+
+        '<p>'+ (chosen ? chosen.why : rightOpt.why) +'</p>'+
+        (ok?'':'<div class="why"><strong>Best answer:</strong> '+rightOpt.t+'</div>')+
+        '<div class="why">'+Q.lesson+'</div>'+
+        '<button class="btn primary" id="nextBtn" style="margin-top:16px">Continue &rarr;</button></div>';
+    review.push({ok:!!ok, q:'Call judgement: '+Q.who, a:Q.lesson});
+    A.el('nextBtn').onclick = function(){ ci++; A.SFX.select(); callRound(); window.scrollTo({top:0,behavior:'smooth'}); };
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('#opts .opt'), function(b){
+    b.onclick = function(){ pick(+b.dataset.i); };
+  });
+  timer = A.Timer(A.el('tbar'), LIMIT, function(){ pick(null); });
+}
+
+/* ---- Stage 3 ---- */
+function promptRound(){
+  if (pi >= PROMPT_SET.length) return done();
+  var P = PROMPT_SET[pi];
+  var LIMIT = 12;
+
+  A.el('stage').innerHTML =
+    hudRow('Prompt', (pi+1)+' / '+PROMPT_SET.length) +
+    '<div class="timerbar" id="tbar"><i></i></div>' +
+    '<div class="stagehdr"><span class="eyebrow">Stage 3 · Prompt Firewall</span>'+
+      '<span class="chip">12 seconds — go on instinct</span></div>' +
+    '<h3 style="margin-bottom:14px">You\'re about to send this to an AI tool.</h3>' +
+    '<div class="promptbox"><span class="tag">Draft prompt</span>'+esc(P.text)+'</div>' +
+    '<div class="triage" id="tri">'+Object.keys(TRIAGE).map(function(k){
+      return '<button class="btn '+(k==='safe'?'primary':'ghost')+'" data-k="'+k+'">'+
+        TRIAGE[k].label+'<small>'+TRIAGE[k].sub+'</small></button>';
+    }).join('')+'</div>' +
+    '<div id="fb" style="margin-top:16px"></div>';
+
+  function pick(k){
+    if (timer) timer.stop();
+    var left = timer ? timer.remaining() : 0;
+    var ok = k === P.a;
+    total++;
+    if (ok){ var pts = 50 + Math.round((left/LIMIT)*20); bump(pts); correct++; streak++; best=Math.max(best,streak); A.SFX.good(); }
+    else { streak = 0; A.SFX.bad(); }
+    Array.prototype.forEach.call(document.querySelectorAll('#tri .btn'), function(b){
+      b.disabled = true;
+      if (b.dataset.k === P.a) b.style.boxShadow = '0 0 0 2px var(--pistachio)';
+    });
+    A.el('fb').innerHTML =
+      '<div class="verdict '+(ok?'ok':'no')+'"><div class="vh">'+
+        (ok?'✓ '+TRIAGE[P.a].label+' <span class="chip good">+'+pts+'</span>':'✕ Correct call: '+TRIAGE[P.a].label)+'</div>'+
+        '<p>'+esc(P.why)+'</p>'+
+        '<button class="btn primary" id="nextBtn" style="margin-top:14px">'+
+          (pi+1>=PROMPT_SET.length?'See results':'Next prompt')+' &rarr;</button></div>';
+    review.push({ok:ok, q:'Prompt firewall: "'+P.text.slice(0,58)+(P.text.length>58?'…':'')+'"', a:P.why});
+    A.el('nextBtn').onclick = function(){ pi++; A.SFX.select(); promptRound(); };
+    A.el('nextBtn').focus();
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('#tri .btn'), function(b){
+    b.onclick = function(){ pick(b.dataset.k); };
+  });
+  timer = A.Timer(A.el('tbar'), LIMIT, function(){ pick(null); });
+}
+
+function done(){
+  A.finish({
+    score: Math.round(A.clamp(raw/rawMax,0,1)*1000),
+    maxScore: 1000,
+    accuracy: Math.round((correct/total)*100),
+    statLabel:'Best streak', statValue:best,
+    review: review
+  });
+}
+
+A.boot({
+  week:2, topic:'AI Safety & Deepfakes', title:'Synthetic',
+  tagline:'Three stages. Pull apart two fabricated video frames, survive five calls that are not who they claim to be, and decide what is safe to hand an AI tool. Everything here is a fictional training scenario.',
+  rounds:17, minutes:9, maxScore:1000,
+  brief:[
+    '<strong>Stage 1 — Frame Forensics:</strong> click the synthesis artifacts hidden in two fake video frames. +60 each, &minus;20 for a false positive.',
+    '<strong>Stage 2 — Live Call Judgement:</strong> five calls, 40 seconds each. Pick the safest response, not the most polite one.',
+    '<strong>Stage 3 — Prompt Firewall:</strong> eight rapid rounds, 12 seconds each. Safe to send, redact first, or never send.',
+    'No lives here — but time is scored, and every wrong answer is explained.',
+    'The real lesson lands in stage 2: spotting a fake by eye is a bonus. Verifying on a channel you chose is the control.'
+  ],
+  onStart:start
+});
+})();
+</script>
+</body>
+</html>
