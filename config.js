@@ -32,11 +32,11 @@ window.CYBER_CONFIG = {
     4: "2026-10-22"
   },
   /* Set to false to ignore the dates above and unlock everything. */
-  enforceUnlockDates: true,
+  enforceUnlockDates: false,
 
   /* ---------- GOOGLE FORM (score capture) ----------
      From your form's URL:
-     https://docs.google.com/forms/d/e/FORM_ID_HERE/viewform
+     https://docs.google.com/forms/d/e/1FAIpQLSev2LRvh_38bKi5GFZF4IYba9CKvmKesDDX-pirHv3WhjsGgQ/viewform
      Paste FORM_ID_HERE below (the long string starting 1FAIpQL...). */
   googleForm: {
     enabled: true,                 // <-- flip to true once IDs are filled in
@@ -77,7 +77,7 @@ window.CYBER_CONFIG = {
 
   /* ---------- OPTIONAL ---------- */
   /* Shown on the hub and in results. Point people somewhere real. */
-  reportPhishingHowTo: "Use the Report Phish Hook button in Gmail, or forward to your security team.",
+  reportPhishingHowTo: "Use the Phish Hook button in Gmail to report a phish, or forward to your security team.",
   securityContact: "",              // e.g. "security@coupa.com" — leave blank to hide
 
   /* Departments offered in the start-screen dropdown. */
