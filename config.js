@@ -45,16 +45,16 @@ window.CYBER_CONFIG = {
     /* Field IDs from your form. SETUP.md shows how to find these
        in 30 seconds. They look like "entry.1234567890". */
     fields: {
-      email:          "entry.872374964=1",
-      name:           "entry.63413120=2",
-      department:     "entry.895236575=3",
-      week:           "entry.2005762378=4",
-      gameTitle:      "entry.760262254=5",
-      score:          "entry.120848288=6",
-      maxScore:       "entry.1487419042=7",
-      accuracy:       "entry.940510508=8",
-      timeSeconds:    "entry.1499180504=9",
-      completionCode: "entry.912360528=10"
+      email:          "entry.872374964",
+      name:           "entry.63413120",
+      department:     "entry.895236575",
+      week:           "entry.2005762378",
+      gameTitle:      "entry.760262254",
+      score:          "entry.120848288",
+      maxScore:       "entry.1487419042",
+      accuracy:       "entry.940510508",
+      timeSeconds:    "entry.1499180504",
+      completionCode: "entry.912360528"
     }
   },
 
@@ -63,8 +63,8 @@ window.CYBER_CONFIG = {
      select the sheet > Comma-separated values (.csv) > Publish.
      Paste the whole published URL below. */
   leaderboard: {
-    enabled: false,                 // <-- flip to true once URL is filled in
-    publishedCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQZ_MwFIJzZ7eQkIXmRm4wAx1KOQ7xwl6hiC_rIFjRenVqTqOLUn9iHevZ_6rzW_-CxSGc1feBuZ3e_/pub?output=csv",
+    enabled: true,                 // <-- flip to true once URL is filled in
+    publishedCsvUrl: "https://docs.google.com/spreadsheets/d/e/2PACX-1vQZ_MwFIJzZ7eQkIXmRm4wAx1KOQ7xwl6hiC_rIFjRenVqTqOLUn9iHevZ_6rzW_-CxSGc1feBuZ3e_/pub?gid=0&single=true&output=csv",
     topN: 15,
     /* Column headers in your sheet, as they actually appear. */
     columns: {
