@@ -227,3 +227,20 @@ table.lb .pos{color:var(--dimmer);font-weight:600;width:38px}
 footer.foot{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);
   color:var(--dimmer);font-size:13px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
 a{color:var(--robin)}
+/* Hide leaderboard panels and expand 'How it works' full-width */
+#leaderboard,
+#lbMount,
+.panel:has(#lbMount) {
+  display: none !important;
+}
+
+.two {
+  grid-template-columns: 1fr !important;
+}
+```[cite: 2, 3]
+
+### What This Does
+
+* **Hub Screen (`index.html`)**: Hides the empty leaderboard panel and automatically stretches the *"How it works"* card across the full width of the page[cite: 3].
+* **Results Screen (`arcade.js`)**: Removes the *"Program Leaderboard"* card from the bottom of the completion debrief[cite: 1].
+* **Background Tracking**: Players still submit their name, email, score, accuracy, and completion code silently to your Google Form[cite: 1, 5, 6].
