@@ -227,20 +227,45 @@ table.lb .pos{color:var(--dimmer);font-weight:600;width:38px}
 footer.foot{margin-top:44px;padding-top:20px;border-top:1px solid var(--line);
   color:var(--dimmer);font-size:13px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
 a{color:var(--robin)}
-/* Hide leaderboard panels and expand 'How it works' full-width */
+
+/* ============================================================
+   HIDE ALL LEADERBOARD UI & BUTTONS
+   ============================================================ */
+
+/* 1. Hide the leaderboard card on index.html */
 #leaderboard,
+
+/* 2. Hide the leaderboard panel on the results screen */
 #lbMount,
-.panel:has(#lbMount) {
+.panel:has(#lbMount),
+
+/* 3. Hide all 'Leaderboard' navigation buttons in hero and topbar */
+a[href*="leaderboard"] {
   display: none !important;
 }
 
+/* 4. Stretch 'How it works' to full width */
 .two {
   grid-template-columns: 1fr !important;
 }
 ```[cite: 2, 3]
 
-### What This Does
+---
 
-* **Hub Screen (`index.html`)**: Hides the empty leaderboard panel and automatically stretches the *"How it works"* card across the full width of the page[cite: 3].
-* **Results Screen (`arcade.js`)**: Removes the *"Program Leaderboard"* card from the bottom of the completion debrief[cite: 1].
-* **Background Tracking**: Players still submit their name, email, score, accuracy, and completion code silently to your Google Form[cite: 1, 5, 6].
+### Step 2: Force Clear Your Browser Cache
+
+Mac browsers heavily cache `.css` files[cite: 2]. After saving `arcade.css`:
+
+* **Safari / Chrome / Firefox on Mac**: Press **`Cmd + Shift + R`** (or hold **`Shift`** and click the browser's Reload button) while viewing `index.html`[cite: 3].
+
+---
+
+### Step 3: Optional Clean Code Removal
+
+If you'd rather permanently strip the code instead of hiding it via CSS:
+
+1. **In `index.html`**:
+   * Delete `<a class="btn ghost lg" href="#leaderboard">Leaderboard</a>` from the hero area[cite: 3].
+   * Delete `<div class="panel" id="leaderboard">...</div>`[cite: 3].
+2. **In `arcade.js`**:
+   * Search for `Program leaderboard` near line 200 and delete the surrounding `<div class="panel fadein">` block[cite: 1].
